@@ -1,7 +1,7 @@
 import Card from "./Card";
 import { getCardInfo } from "@/utils/cards";
 
-export default function Hand({ cards, selectedIds, onToggleCard, disabled }) {
+export default function Hand({ cards, selectedIndices, onToggleCard, disabled }) {
   return (
     <div className="hand">
       <div className="hand-label">
@@ -9,13 +9,12 @@ export default function Hand({ cards, selectedIds, onToggleCard, disabled }) {
       </div>
       <div className="hand-cards">
         {cards.map((cardId, i) => {
-          const info = getCardInfo(cardId);
           return (
             <Card
-              key={`${cardId}-${i}`}
+              key={i}
               cardId={cardId}
-              selected={selectedIds && selectedIds.includes(cardId)}
-              onClick={disabled ? null : () => onToggleCard && onToggleCard(cardId)}
+              selected={selectedIndices && selectedIndices.includes(i)}
+              onClick={disabled ? null : () => onToggleCard && onToggleCard(i)}
             />
           );
         })}

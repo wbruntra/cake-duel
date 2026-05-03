@@ -45,6 +45,41 @@
   align-items: center;
   gap: 12px;
 }
+.lobby-created {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.lobby-waiting {
+  font-size: 16px;
+  color: var(--text);
+  margin: 0;
+}
+.invite-link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.btn-copy {
+  font-size: 14px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-copy:hover {
+  background: var(--hover);
+}
+.lobby-error {
+  color: #e53e3e;
+  font-size: 14px;
+}
 .game-id {
   font-family: var(--mono);
   font-size: 22px;

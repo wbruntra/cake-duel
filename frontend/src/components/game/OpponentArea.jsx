@@ -1,3 +1,4 @@
+import { useGame } from "@/context/GameContext";
 import CakeDisplay from "./CakeDisplay";
 import Card from "./Card";
 

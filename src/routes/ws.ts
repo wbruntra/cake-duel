@@ -8,7 +8,12 @@ import type { GameState, Player } from "../game/types";
 type GameRow = typeof games.$inferSelect;
 type PlayerLabel = "p1" | "p2";
 
-const connections = new Map<string, Map<PlayerLabel, { ws: ServerWebSocket; player: PlayerLabel }>>();
+export type WsData = {
+  gameId: string | null;
+  player: PlayerLabel | null;
+};
+
+const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>();
 
 function parseGame(row: GameRow): GameState {
   return {
@@ -72,99 +77,111 @@ async function saveGame(state: GameState) {
 function broadcast(state: GameState) {
   const gameConns = connections.get(state.id);
   if (!gameConns) return;
-  for (const [, entry] of gameConns) {
-    entry.ws.send(JSON.stringify({ type: "state", state: stateForPlayer(state, entry.player) }));
+  for (const [player, ws] of gameConns) {
+    ws.send(JSON.stringify({ type: "state", state: stateForPlayer(state, player) }));
   }
 }
 
-function send(ws: ServerWebSocket, msg: object) {
+function send(ws: ServerWebSocket<WsData>, msg: object) {
   ws.send(JSON.stringify(msg));
 }
 
-export function handleWebSocket(ws: ServerWebSocket) {
-  let gameId: string | null = null;
-  let player: PlayerLabel | null = null;
-
+export function wsOpen(ws: ServerWebSocket<WsData>) {
   send(ws, { type: "connected" });
+}
 
-  ws.addEventListener("message", async (event: MessageEvent) => {
-    try {
-      const msg = JSON.parse(typeof event.data === "string" ? event.data : event.data.toString());
+export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string | Buffer) {
+  try {
+    const msg = JSON.parse(typeof rawMessage === "string" ? rawMessage : rawMessage.toString());
 
-      if (msg.type === "join") {
-        gameId = msg.gameId;
-        player = msg.playerId === "p1" ? "p1" : "p2";
-
-        if (!connections.has(gameId)) connections.set(gameId, new Map());
-        connections.get(gameId)!.set(player, { ws, player });
-
-        const state = await loadGame(gameId);
-        if (state) {
-          send(ws, { type: "state", state: stateForPlayer(state, player) });
-        }
-        return;
-      }
-
-      if (!gameId || !player) {
-        send(ws, { type: "error", message: "Not joined" });
-        return;
-      }
-
-      const state = await loadGame(gameId);
+    if (msg.type === "join") {
+      const state = await loadGame(msg.gameId);
       if (!state) {
         send(ws, { type: "error", message: "Game not found" });
         return;
       }
 
-      switch (msg.type) {
-        case "attack": {
-          const result = playAttack(state, player, msg.cardIds, msg.claimedName);
-          if (result.error) { send(ws, { type: "error", message: result.error }); return; }
-          await saveGame(result.state);
-          broadcast(result.state);
-          break;
-        }
-        case "block": {
-          const result = playBlock(state, player, msg.cardIds, msg.claimedName);
-          if (result.error) { send(ws, { type: "error", message: result.error }); return; }
-          await saveGame(result.state);
-          broadcast(result.state);
-          break;
-        }
-        case "resolve": {
-          const { state: resolved, boutOver, attackerWins } = resolveTurn(state);
-          if (boutOver) {
-            await saveGame(resolved);
-            broadcast(resolved);
-          } else {
-            const supplied = resupply(resolved);
-            await saveGame(supplied);
-            broadcast(supplied);
-          }
-          break;
-        }
-        case "pass": {
-          const result = pass(state, player);
-          if (result.error) { send(ws, { type: "error", message: result.error }); return; }
-          await saveGame(result.state);
-          broadcast(result.state);
-          break;
-        }
-        default:
-          send(ws, { type: "error", message: `Unknown action: ${msg.type}` });
+      let player: PlayerLabel;
+      if (msg.playerId === state.player1Id) {
+        player = "p1";
+      } else if (msg.playerId === state.player2Id) {
+        player = "p2";
+      } else {
+        send(ws, { type: "error", message: "Not a player in this game" });
+        return;
       }
-    } catch (e: any) {
-      send(ws, { type: "error", message: e.message });
-    }
-  });
 
-  ws.addEventListener("close", () => {
-    if (gameId && player) {
-      const gameConns = connections.get(gameId);
-      if (gameConns) {
-        gameConns.delete(player);
-        if (gameConns.size === 0) connections.delete(gameId);
-      }
+      ws.data.gameId = msg.gameId;
+      ws.data.player = player;
+
+      if (!connections.has(msg.gameId)) connections.set(msg.gameId, new Map());
+      connections.get(msg.gameId)!.set(player, ws);
+
+      send(ws, { type: "state", state: stateForPlayer(state, player) });
+      return;
     }
-  });
+
+    const { gameId, player } = ws.data;
+    if (!gameId || !player) {
+      send(ws, { type: "error", message: "Not joined" });
+      return;
+    }
+
+    const state = await loadGame(gameId);
+    if (!state) {
+      send(ws, { type: "error", message: "Game not found" });
+      return;
+    }
+
+    switch (msg.type) {
+      case "attack": {
+        const result = playAttack(state, player, msg.cardIds, msg.claimedName);
+        if (result.error) { send(ws, { type: "error", message: result.error }); return; }
+        await saveGame(result.state);
+        broadcast(result.state);
+        break;
+      }
+      case "block": {
+        const result = playBlock(state, player, msg.cardIds, msg.claimedName);
+        if (result.error) { send(ws, { type: "error", message: result.error }); return; }
+        await saveGame(result.state);
+        broadcast(result.state);
+        break;
+      }
+      case "resolve": {
+        const { state: resolved, boutOver } = resolveTurn(state);
+        if (boutOver) {
+          await saveGame(resolved);
+          broadcast(resolved);
+        } else {
+          const supplied = resupply(resolved);
+          await saveGame(supplied);
+          broadcast(supplied);
+        }
+        break;
+      }
+      case "pass": {
+        const result = pass(state, player);
+        if (result.error) { send(ws, { type: "error", message: result.error }); return; }
+        await saveGame(result.state);
+        broadcast(result.state);
+        break;
+      }
+      default:
+        send(ws, { type: "error", message: `Unknown action: ${msg.type}` });
+    }
+  } catch (e: any) {
+    send(ws, { type: "error", message: e.message });
+  }
+}
+
+export function wsClose(ws: ServerWebSocket<WsData>) {
+  const { gameId, player } = ws.data;
+  if (gameId && player) {
+    const gameConns = connections.get(gameId);
+    if (gameConns) {
+      gameConns.delete(player);
+      if (gameConns.size === 0) connections.delete(gameId);
+    }
+  }
 }

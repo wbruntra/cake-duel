@@ -6,7 +6,7 @@ import { getCardInfo, getAttackerOptions, getBlockerOptions } from "@/utils/card
 
 export default function PlayerArea() {
   const { state, send } = useGame();
-  const [selectedCards, setSelectedCards] = useState([]);
+  const [selectedIndices, setSelectedIndices] = useState([]);
   const [claimedName, setClaimedName] = useState("");
 
   if (!state) return null;
@@ -26,23 +26,20 @@ export default function PlayerArea() {
     return [];
   }, [isAttackPhase, isBlockPhase, attackerType]);
 
-  function toggleCard(cardId) {
-    setSelectedCards((prev) =>
-      prev.includes(cardId)
-        ? prev.filter((id) => id !== cardId)
-        : [...prev, cardId]
+  function toggleCard(index) {
+    setSelectedIndices((prev) =>
+      prev.includes(index)
+        ? prev.filter((i) => i !== index)
+        : [...prev, index]
     );
   }
 
   function doPlay() {
-    if (selectedCards.length === 0 || !claimedName) return;
+    if (selectedIndices.length === 0 || !claimedName) return;
     const action = isAttackPhase ? "attack" : "block";
-    send({
-      type: action,
-      cardIds: selectedCards,
-      claimedName,
-    });
-    setSelectedCards([]);
+    const cardIds = selectedIndices.map((i) => state.hand[i]);
+    send({ type: action, cardIds, claimedName });
+    setSelectedIndices([]);
     setClaimedName("");
   }
 
@@ -82,21 +79,21 @@ export default function PlayerArea() {
             <button
               className="btn btn-play"
               onClick={doPlay}
-              disabled={selectedCards.length === 0 || !claimedName}
+              disabled={selectedIndices.length === 0 || !claimedName}
             >
               {isAttackPhase ? "Attack" : "Block"}
             </button>
           </div>
 
           <div className="selected-info">
-            Selected: {selectedCards.length} card{selectedCards.length !== 1 ? "s" : ""}
+            Selected: {selectedIndices.length} card{selectedIndices.length !== 1 ? "s" : ""}
           </div>
         </div>
       )}
 
       <Hand
         cards={state.hand}
-        selectedIds={selectedCards}
+        selectedIndices={selectedIndices}
         onToggleCard={canAct ? toggleCard : null}
         disabled={!canAct}
       />

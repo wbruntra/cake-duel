@@ -13,13 +13,16 @@ export function useWebSocket(gameId, playerId) {
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
+    let active = true;
 
     ws.onopen = () => {
+      if (!active) return;
       setConnected(true);
       ws.send(JSON.stringify({ type: "join", gameId, playerId }));
     };
 
     ws.onmessage = (event) => {
+      if (!active) return;
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "state") {
@@ -35,14 +38,17 @@ export function useWebSocket(gameId, playerId) {
     };
 
     ws.onclose = () => {
+      if (!active) return;
       setConnected(false);
     };
 
     ws.onerror = () => {
+      if (!active) return;
       setError("WebSocket connection error");
     };
 
     return () => {
+      active = false;
       ws.close();
     };
   }, [gameId, playerId]);

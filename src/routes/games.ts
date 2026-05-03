@@ -1,13 +1,13 @@
-import { Hono } from "hono";
-import { db } from "../db";
-import { games } from "../db/schema";
-import { eq } from "drizzle-orm";
-import { newBout } from "../game/engine";
-import type { GameState, Player } from "../game/types";
-import { stateForPlayer } from "../game/engine";
+import { Hono } from 'hono'
+import { db } from '../db'
+import { games } from '../db/schema'
+import { eq } from 'drizzle-orm'
+import { newBout } from '../game/engine'
+import type { GameState, Player } from '../game/types'
+import { stateForPlayer } from '../game/engine'
 
 function generateId(): string {
-  return Math.random().toString(36).substring(2, 10);
+  return Math.random().toString(36).substring(2, 10)
 }
 
 function parseGameRow(row: any): GameState {
@@ -32,7 +32,7 @@ function parseGameRow(row: any): GameState {
     attackClaim: row.attackClaim ? JSON.parse(row.attackClaim) : null,
     blockClaim: row.blockClaim ? JSON.parse(row.blockClaim) : null,
     passedLast: row.passedLast,
-  };
+  }
 }
 
 function serializeGameState(state: GameState): Record<string, any> {
@@ -58,18 +58,18 @@ function serializeGameState(state: GameState): Record<string, any> {
     attackClaim: state.attackClaim ? JSON.stringify(state.attackClaim) : null,
     blockClaim: state.blockClaim ? JSON.stringify(state.blockClaim) : null,
     passedLast: state.passedLast,
-  };
+  }
 }
 
-const app = new Hono();
+const app = new Hono()
 
-app.post("/api/games", async (c) => {
-  const playerId = generateId();
-  const gameId = generateId();
+app.post('/api/games', async (c) => {
+  const playerId = generateId()
+  const gameId = generateId()
 
   const gameState: GameState = {
     id: gameId,
-    status: "waiting",
+    status: 'waiting',
     player1Id: playerId,
     player2Id: null,
     currentBout: 1,
@@ -88,59 +88,56 @@ app.post("/api/games", async (c) => {
     attackClaim: null,
     blockClaim: null,
     passedLast: null,
-  };
+  }
 
   await db.insert(games).values({
     id: gameId,
     createdAt: new Date().toISOString(),
     ...serializeGameState(gameState),
-  });
+  })
 
-  return c.json({ gameId, playerId });
-});
+  return c.json({ gameId, playerId })
+})
 
-app.post("/api/games/:id/join", async (c) => {
-  const gameId = c.req.param("id");
+app.post('/api/games/:id/join', async (c) => {
+  const gameId = c.req.param('id')
 
-  const rows = await db.select().from(games).where(eq(games.id, gameId));
-  if (rows.length === 0) return c.json({ error: "Game not found" }, 404);
+  const rows = await db.select().from(games).where(eq(games.id, gameId))
+  if (rows.length === 0) return c.json({ error: 'Game not found' }, 404)
 
-  const row = rows[0]!;
-  if (row.status !== "waiting") return c.json({ error: "Game not joinable" }, 400);
+  const row = rows[0]!
+  if (row.status !== 'waiting') return c.json({ error: 'Game not joinable' }, 400)
 
-  const playerId = generateId();
-  const gameState = parseGameRow(row);
+  const playerId = generateId()
+  const gameState = parseGameRow(row)
 
-  const startedState = newBout(gameState, "p1");
-  startedState.player2Id = playerId;
+  const startedState = newBout(gameState, 'p1')
+  startedState.player2Id = playerId
 
-  await db
-    .update(games)
-    .set(serializeGameState(startedState))
-    .where(eq(games.id, gameId));
+  await db.update(games).set(serializeGameState(startedState)).where(eq(games.id, gameId))
 
-  return c.json({ gameId, playerId });
-});
+  return c.json({ gameId, playerId })
+})
 
-app.get("/api/games/:id", async (c) => {
-  const gameId = c.req.param("id");
-  const playerId = c.req.query("player");
+app.get('/api/games/:id', async (c) => {
+  const gameId = c.req.param('id')
+  const playerId = c.req.query('player')
 
-  const rows = await db.select().from(games).where(eq(games.id, gameId));
-  if (rows.length === 0) return c.json({ error: "Game not found" }, 404);
+  const rows = await db.select().from(games).where(eq(games.id, gameId))
+  if (rows.length === 0) return c.json({ error: 'Game not found' }, 404)
 
-  const row = rows[0]!;
-  const gameState = parseGameRow(row);
+  const row = rows[0]!
+  const gameState = parseGameRow(row)
 
-  if (!playerId) return c.json({ error: "player query param required" }, 400);
+  if (!playerId) return c.json({ error: 'player query param required' }, 400)
 
-  const player: Player = row.player1Id === playerId ? "p1" : "p2";
+  const player: Player = row.player1Id === playerId ? 'p1' : 'p2'
   if (row.player1Id !== playerId && row.player2Id !== playerId) {
-    return c.json({ error: "Not in this game" }, 403);
+    return c.json({ error: 'Not in this game' }, 403)
   }
 
-  const visibleState = stateForPlayer(gameState, player);
-  return c.json(visibleState);
-});
+  const visibleState = stateForPlayer(gameState, player)
+  return c.json(visibleState)
+})
 
-export default app;
+export default app

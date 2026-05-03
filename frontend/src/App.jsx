@@ -5,6 +5,11 @@ import Lobby from "./components/lobby/Lobby";
 import GameView from "./components/game/GameView";
 import "./App.css";
 
+function getJoinParam() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("join");
+}
+
 function useLocalStorage(key, initial) {
   const [value, setValue] = useState(() => {
     try {
@@ -40,7 +45,7 @@ export default function App() {
   }
 
   if (!gameId || !playerId) {
-    return <Lobby onGameStart={handleGameStart} />;
+    return <Lobby onGameStart={handleGameStart} initialJoinId={getJoinParam()} />;
   }
 
   return (
