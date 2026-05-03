@@ -17,7 +17,7 @@ export default function ActionBar() {
   const isBlockPhase = state.turnPhase === 'block' && isMyTurn
   const isResolvePhase = state.turnPhase === 'resolve'
   const isGameOver = state.turnPhase === 'game_over'
-  const isResupply = state.turnPhase === 'resupply'
+  const isChallengeResult = state.turnPhase === 'challenge_result'
   const isWaiting = !isMyTurn && (state.turnPhase === 'attack' || state.turnPhase === 'block')
   const amAttacker = state.attackClaim?.player === state.player
   const canChallengeBlock = isResolvePhase && amAttacker && state.blockClaim != null
@@ -63,9 +63,33 @@ export default function ActionBar() {
     send({ type: 'challenge', target })
   }
 
+  function doChallengeAck() {
+    tap()
+    send({ type: 'challengeAck' })
+  }
+
   function doPlayAgain() {
     tap()
     onLeave()
+  }
+
+  if (isChallengeResult) {
+    const hasAcked = state.challengeAcks?.includes(state.player)
+    return (
+      <div className={BAR_CLASS}>
+        {!hasAcked ? (
+          <button
+            className="w-full h-14 text-lg font-semibold rounded-lg bg-accent text-white active:scale-95 transition-transform touch-manipulation"
+            onClick={doChallengeAck}
+          >
+            Continue
+          </button>
+        ) : (
+          <span className="text-text text-base italic">Waiting for opponent…</span>
+        )}
+        <div className="h-5" />
+      </div>
+    )
   }
 
   if (isWaiting) {
@@ -74,15 +98,6 @@ export default function ActionBar() {
     return (
       <div className={BAR_CLASS}>
         <span className="text-text text-base italic">{waitingText}…</span>
-        <div className="h-5" />
-      </div>
-    )
-  }
-
-  if (isResupply) {
-    return (
-      <div className={BAR_CLASS}>
-        <span className="text-text text-base italic">Resupplying…</span>
         <div className="h-5" />
       </div>
     )

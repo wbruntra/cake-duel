@@ -1,4 +1,4 @@
-import type { GameState, Player, Claim } from './types'
+import type { GameState, Player, Claim, ChallengeResult, TurnResult } from './types'
 import { opponent, getCakes, getHand } from './types'
 import { getCardByName, getCardById, createDeck, getAttackerTypes } from './cards'
 
@@ -49,6 +49,10 @@ export function newBout(state: GameState, startingPlayer: Player): GameState {
     passedLast: null,
     turnPlayer: startingPlayer,
     turnPhase: 'attack',
+    lastTurnResult: null,
+    challengeResult: null,
+    challengeAcks: [],
+    boutEndAcks: [],
   }
 }
 
@@ -88,6 +92,7 @@ export function playAttack(
       passedLast: null,
       turnPhase: 'block',
       turnPlayer: opponent(player),
+      lastTurnResult: null,
     },
   }
 }
@@ -165,6 +170,7 @@ export function pass(
       attackClaim: null,
       turnPlayer: opponent(player),
       turnPhase: 'attack',
+      lastTurnResult: null,
     },
     doublePass,
   }
@@ -172,11 +178,17 @@ export function pass(
 
 export function resolveTurn(state: GameState): {
   state: GameState
+  turnResult: TurnResult
   boutOver: boolean
   attackerWins: boolean
 } {
   if (!state.attackClaim) {
-    return { state, boutOver: false, attackerWins: false }
+    return {
+      state,
+      turnResult: { attackClaim: null as any, blockClaim: null, cakesStolen: 0, defenderCakes: 0, boutOver: false },
+      boutOver: false,
+      attackerWins: false,
+    }
   }
 
   const attackCard = getCardByName(state.attackClaim.cardName)!
@@ -201,17 +213,24 @@ export function resolveTurn(state: GameState): {
     [defender === 'p1' ? 'p1Cakes' : 'p2Cakes']: defenderCakes - actuallyStolen,
   }
 
-  if (getCakes(next, defender) <= 0) {
-    return { state: next, boutOver: true, attackerWins: true }
+  const boutOver = getCakes(next, defender) <= 0
+  const attackerWins = boutOver
+
+  const turnResult: TurnResult = {
+    attackClaim: state.attackClaim,
+    blockClaim: state.blockClaim,
+    cakesStolen: actuallyStolen,
+    defenderCakes: defenderCakes - actuallyStolen,
+    boutOver,
   }
 
-  return { state: next, boutOver: false, attackerWins: false }
+  return { state: next, turnResult, boutOver, attackerWins }
 }
 
 export function resupply(state: GameState): GameState {
   let { deck } = state
   if (!state.attackClaim)
-    return { ...state, turnPhase: 'attack', turnPlayer: opponent(state.turnPlayer!) }
+    return { ...state, turnPhase: 'attack', turnPlayer: opponent(state.turnPlayer!), lastTurnResult: null }
 
   const attacker = state.attackClaim.player
   const defender = opponent(attacker)
@@ -236,6 +255,7 @@ export function resupply(state: GameState): GameState {
     turnPlayer: opponent(attacker),
     attackClaim: null,
     blockClaim: null,
+    lastTurnResult: null,
   }
 }
 
@@ -294,7 +314,6 @@ export function ackBoutEnd(
   }
 }
 
-// Kept for backward compatibility with tests
 export function endBout(state: GameState, boutWinner: Player): GameState {
   const afterFinish = finishBout(state, boutWinner)
   if (afterFinish.status === 'finished') return afterFinish
@@ -324,29 +343,82 @@ export function resolveChallenge(
   state: GameState,
   challenger: Player,
   target: 'attack' | 'block',
-): { state: GameState; boutWinner: Player } | { state: GameState; error: string } {
+): { state: GameState; challengeResult: ChallengeResult } | { state: GameState; error: string } {
   if (target === 'attack') {
     if (state.turnPhase !== 'block')
       return { state, error: 'Can only challenge an attack during block phase' }
     if (state.turnPlayer !== challenger) return { state, error: 'Not your turn' }
     if (!state.attackClaim) return { state, error: 'No attack claim to challenge' }
-    const boutWinner: Player = isClaimTruthful(state.attackClaim)
+    const claimWasTruthful = isClaimTruthful(state.attackClaim)
+    const boutWinner: Player = claimWasTruthful
       ? state.attackClaim.player
       : challenger
-    return { state, boutWinner }
+    const revealedCardNames = state.attackClaim.playedCardIds.map(
+      (id) => getCardById(id)?.name ?? 'Unknown',
+    )
+    return {
+      state,
+      challengeResult: {
+        target,
+        challenger,
+        claimWasTruthful,
+        boutWinner,
+        revealedCardNames,
+      },
+    }
   }
 
-  // target === 'block'
   if (state.turnPhase !== 'resolve')
     return { state, error: 'Can only challenge a block during resolve phase' }
   if (!state.attackClaim) return { state, error: 'No attack claim on record' }
   if (state.attackClaim.player !== challenger)
     return { state, error: 'Only the attacker can challenge a block' }
   if (!state.blockClaim) return { state, error: 'No block claim to challenge' }
-  const boutWinner: Player = isClaimTruthful(state.blockClaim)
+  const claimWasTruthful = isClaimTruthful(state.blockClaim)
+  const boutWinner: Player = claimWasTruthful
     ? state.blockClaim.player
     : challenger
-  return { state, boutWinner }
+  const revealedCardNames = state.blockClaim.playedCardIds.map(
+    (id) => getCardById(id)?.name ?? 'Unknown',
+  )
+  return {
+    state,
+    challengeResult: {
+      target,
+      challenger,
+      claimWasTruthful,
+      boutWinner,
+      revealedCardNames,
+    },
+  }
+}
+
+export function toChallengeResult(
+  state: GameState,
+  challengeResult: ChallengeResult,
+): GameState {
+  return {
+    ...state,
+    turnPhase: 'challenge_result',
+    challengeResult,
+    challengeAcks: [],
+  }
+}
+
+export function ackChallengeResult(
+  state: GameState,
+  player: Player,
+): { state: GameState; bothAcked: boolean; error?: string } {
+  if (state.turnPhase !== 'challenge_result') {
+    return { state, bothAcked: false, error: 'Not in challenge_result phase' }
+  }
+  const acks = state.challengeAcks.includes(player)
+    ? state.challengeAcks
+    : [...state.challengeAcks, player]
+  return {
+    state: { ...state, challengeAcks: acks },
+    bothAcked: acks.length === 2,
+  }
 }
 
 export function stateForPlayer(state: GameState, player: Player) {
@@ -368,6 +440,35 @@ export function stateForPlayer(state: GameState, player: Player) {
     attackClaim: state.attackClaim,
     blockClaim: state.blockClaim,
     boutEndAcks: state.boutEndAcks,
+    challengeResult: state.challengeResult
+      ? getChallengeResultForPlayer(state.challengeResult, player)
+      : null,
+    challengeAcks: state.challengeAcks,
+    lastTurnResult: state.lastTurnResult
+      ? {
+          attackClaim: state.lastTurnResult.attackClaim,
+          blockClaim: state.lastTurnResult.blockClaim,
+          cakesStolen: state.lastTurnResult.cakesStolen,
+          defenderCakes: state.lastTurnResult.defenderCakes,
+          boutOver: state.lastTurnResult.boutOver,
+          iStoleCakes: state.lastTurnResult.attackClaim.player === player,
+        }
+      : null,
     player,
+  }
+}
+
+function getChallengeResultForPlayer(
+  result: ChallengeResult,
+  player: Player,
+) {
+  return {
+    target: result.target,
+    challenger: result.challenger,
+    claimWasTruthful: result.claimWasTruthful,
+    boutWinner: result.boutWinner,
+    revealedCardNames: result.revealedCardNames,
+    iChallenged: result.challenger === player,
+    iWon: result.boutWinner === player,
   }
 }

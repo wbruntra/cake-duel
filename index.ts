@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { logger } from 'hono/logger'
 import gameRoutes from './src/routes/games'
 import { wsOpen, wsMessage, wsClose, type WsData } from './src/routes/ws'
 
 const app = new Hono()
 
+app.use(logger())
 app.use('/*', cors())
 
 app.route('/', gameRoutes)

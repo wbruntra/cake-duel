@@ -1,5 +1,5 @@
 export type CardType = 'weapon' | 'magic' | 'special' | 'blocker' | 'unclaimable'
-export type TurnPhase = 'attack' | 'block' | 'resolve' | 'resupply' | 'bout_end' | 'game_over'
+export type TurnPhase = 'attack' | 'block' | 'resolve' | 'challenge_result' | 'bout_end' | 'game_over'
 export type GameStatus = 'waiting' | 'playing' | 'finished'
 export type Player = 'p1' | 'p2'
 
@@ -19,6 +19,22 @@ export interface Claim {
   count: number
   player: Player
   playedCardIds: string[]
+}
+
+export interface ChallengeResult {
+  target: 'attack' | 'block'
+  challenger: Player
+  claimWasTruthful: boolean
+  boutWinner: Player
+  revealedCardNames: string[]
+}
+
+export interface TurnResult {
+  attackClaim: Claim
+  blockClaim: Claim | null
+  cakesStolen: number
+  defenderCakes: number
+  boutOver: boolean
 }
 
 export interface GameState {
@@ -43,6 +59,9 @@ export interface GameState {
   blockClaim: Claim | null
   passedLast: Player | null
   boutEndAcks: Player[]
+  challengeResult: ChallengeResult | null
+  challengeAcks: Player[]
+  lastTurnResult: TurnResult | null
 }
 
 export function getHand(state: GameState, player: Player): string[] {
@@ -59,4 +78,19 @@ export function getHandSize(state: GameState, player: Player): number {
 
 export function opponent(player: Player): Player {
   return player === 'p1' ? 'p2' : 'p1'
+}
+
+export function getChallengeResultForPlayer(
+  result: ChallengeResult,
+  player: Player,
+) {
+  return {
+    target: result.target,
+    challenger: result.challenger,
+    claimWasTruthful: result.claimWasTruthful,
+    boutWinner: result.boutWinner,
+    revealedCardNames: result.revealedCardNames,
+    iChallenged: result.challenger === player,
+    iWon: result.boutWinner === player,
+  }
 }

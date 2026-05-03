@@ -13,6 +13,9 @@ import {
   startNextBout,
   ackBoutEnd,
   determineBoutWinnerOnPass,
+  toChallengeResult,
+  ackChallengeResult,
+  resolveChallenge,
 } from './engine'
 import { createDeck } from './cards'
 import type { GameState, Claim } from './types'
@@ -40,6 +43,9 @@ function baseState(overrides: Partial<GameState> = {}): GameState {
     blockClaim: null,
     passedLast: null,
     boutEndAcks: [],
+    challengeResult: null,
+    challengeAcks: [],
+    lastTurnResult: null,
     ...overrides,
   }
 }
@@ -1224,6 +1230,234 @@ describe('ackBoutEnd', () => {
     const result = ackBoutEnd(state, 'p1')
 
     expect(result.error).toBe('Not in bout_end phase')
+    expect(result.bothAcked).toBe(false)
+  })
+})
+
+describe('resolveTurn', () => {
+  test('returns turnResult with correct data', () => {
+    const attackClaim: Claim = {
+      cardName: 'Soldier',
+      count: 2,
+      player: 'p1',
+      playedCardIds: ['s1', 's2'],
+    }
+    const state = baseState({
+      p1Cakes: 3,
+      p2Cakes: 4,
+      attackClaim,
+      blockClaim: null,
+    })
+
+    const { turnResult } = resolveTurn(state)
+
+    expect(turnResult.attackClaim).toBe(attackClaim)
+    expect(turnResult.blockClaim).toBeNull()
+    expect(turnResult.cakesStolen).toBe(2)
+    expect(turnResult.defenderCakes).toBe(2)
+    expect(turnResult.boutOver).toBe(false)
+  })
+
+  test('returns turnResult with block', () => {
+    const attackClaim: Claim = {
+      cardName: 'Soldier',
+      count: 2,
+      player: 'p1',
+      playedCardIds: ['s1', 's2'],
+    }
+    const blockClaim: Claim = {
+      cardName: 'Defender',
+      count: 1,
+      player: 'p2',
+      playedCardIds: ['d1'],
+    }
+    const state = baseState({
+      p1Cakes: 3,
+      p2Cakes: 4,
+      attackClaim,
+      blockClaim,
+    })
+
+    const { turnResult } = resolveTurn(state)
+
+    expect(turnResult.cakesStolen).toBe(1)
+    expect(turnResult.defenderCakes).toBe(3)
+    expect(turnResult.boutOver).toBe(false)
+  })
+
+  test('returns turnResult when bout is over', () => {
+    const attackClaim: Claim = {
+      cardName: 'Wizard',
+      count: 2,
+      player: 'p1',
+      playedCardIds: ['w1', 'w2'],
+    }
+    const state = baseState({
+      p1Cakes: 3,
+      p2Cakes: 4,
+      attackClaim,
+      blockClaim: null,
+    })
+
+    const { turnResult } = resolveTurn(state)
+
+    expect(turnResult.cakesStolen).toBe(4)
+    expect(turnResult.defenderCakes).toBe(0)
+    expect(turnResult.boutOver).toBe(true)
+  })
+})
+
+describe('resolveChallenge', () => {
+  test('challenging a truthful attack', () => {
+    const attackClaim: Claim = {
+      cardName: 'Soldier',
+      count: 2,
+      player: 'p1',
+      playedCardIds: ['soldier', 'soldier'],
+    }
+    const state = baseState({
+      p2Hand: makeHand(['defender', 'archer']),
+      turnPlayer: 'p2',
+      turnPhase: 'block',
+      attackClaim,
+    })
+
+    const result = resolveChallenge(state, 'p2', 'attack')
+    if ('error' in result) throw new Error(result.error)
+
+    expect(result.challengeResult.target).toBe('attack')
+    expect(result.challengeResult.challenger).toBe('p2')
+    expect(result.challengeResult.claimWasTruthful).toBe(true)
+    expect(result.challengeResult.boutWinner).toBe('p1')
+    expect(result.challengeResult.revealedCardNames).toEqual(['Soldier', 'Soldier'])
+  })
+
+  test('challenging a bluff attack', () => {
+    const attackClaim: Claim = {
+      cardName: 'Soldier',
+      count: 1,
+      player: 'p1',
+      playedCardIds: ['archer'],
+    }
+    const state = baseState({
+      p2Hand: makeHand(['defender', 'archer']),
+      turnPlayer: 'p2',
+      turnPhase: 'block',
+      attackClaim,
+    })
+
+    const result = resolveChallenge(state, 'p2', 'attack')
+    if ('error' in result) throw new Error(result.error)
+
+    expect(result.challengeResult.claimWasTruthful).toBe(false)
+    expect(result.challengeResult.boutWinner).toBe('p2')
+    expect(result.challengeResult.revealedCardNames).toEqual(['Archer'])
+  })
+
+  test('challenging a truthful block', () => {
+    const blockClaim: Claim = {
+      cardName: 'Defender',
+      count: 1,
+      player: 'p2',
+      playedCardIds: ['defender'],
+    }
+    const state = baseState({
+      turnPlayer: 'p1',
+      turnPhase: 'resolve',
+      attackClaim: { cardName: 'Soldier', count: 1, player: 'p1', playedCardIds: ['soldier'] },
+      blockClaim,
+      p2Hand: makeHand(['defender_0']),
+    })
+
+    const result = resolveChallenge(state, 'p1', 'block')
+    if ('error' in result) throw new Error(result.error)
+
+    expect(result.challengeResult.target).toBe('block')
+    expect(result.challengeResult.challenger).toBe('p1')
+    expect(result.challengeResult.claimWasTruthful).toBe(true)
+    expect(result.challengeResult.boutWinner).toBe('p2')
+  })
+})
+
+describe('toChallengeResult', () => {
+  test('sets phase and stores result', () => {
+    const state = baseState({ turnPhase: 'block' })
+    const challengeResult = {
+      target: 'attack' as const,
+      challenger: 'p2' as const,
+      claimWasTruthful: true,
+      boutWinner: 'p1' as const,
+      revealedCardNames: ['Soldier'],
+    }
+    const result = toChallengeResult(state, challengeResult)
+
+    expect(result.turnPhase).toBe('challenge_result')
+    expect(result.challengeResult).toBe(challengeResult)
+    expect(result.challengeAcks).toEqual([])
+  })
+})
+
+describe('ackChallengeResult', () => {
+  test('first ack returns bothAcked false', () => {
+    const state = baseState({
+      turnPhase: 'challenge_result',
+      challengeAcks: [],
+      challengeResult: {
+        target: 'attack',
+        challenger: 'p2',
+        claimWasTruthful: true,
+        boutWinner: 'p1',
+        revealedCardNames: ['Soldier'],
+      },
+    })
+    const result = ackChallengeResult(state, 'p1')
+
+    expect(result.error).toBeUndefined()
+    expect(result.bothAcked).toBe(false)
+    expect(result.state.challengeAcks).toEqual(['p1'])
+  })
+
+  test('second ack returns bothAcked true', () => {
+    const state = baseState({
+      turnPhase: 'challenge_result',
+      challengeAcks: ['p1'],
+      challengeResult: {
+        target: 'attack',
+        challenger: 'p2',
+        claimWasTruthful: true,
+        boutWinner: 'p1',
+        revealedCardNames: ['Soldier'],
+      },
+    })
+    const result = ackChallengeResult(state, 'p2')
+
+    expect(result.bothAcked).toBe(true)
+    expect(result.state.challengeAcks).toEqual(['p1', 'p2'])
+  })
+
+  test('is idempotent', () => {
+    const state = baseState({
+      turnPhase: 'challenge_result',
+      challengeAcks: ['p1'],
+      challengeResult: {
+        target: 'attack',
+        challenger: 'p2',
+        claimWasTruthful: true,
+        boutWinner: 'p1',
+        revealedCardNames: ['Soldier'],
+      },
+    })
+    const result = ackChallengeResult(state, 'p1')
+
+    expect(result.bothAcked).toBe(false)
+    expect(result.state.challengeAcks).toEqual(['p1'])
+  })
+
+  test('error when not in challenge_result phase', () => {
+    const state = baseState({ turnPhase: 'attack', challengeAcks: [] })
+    const result = ackChallengeResult(state, 'p1')
+
+    expect(result.error).toBe('Not in challenge_result phase')
     expect(result.bothAcked).toBe(false)
   })
 })

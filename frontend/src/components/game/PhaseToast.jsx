@@ -12,12 +12,17 @@ export default function PhaseToast() {
     let message = null
     let isBoutEnd = false
 
-    if (state.turnPhase === 'bout_end') {
+    if (state.turnPhase === 'challenge_result') {
+      message = state.challengeResult?.iChallenged
+        ? 'You issued a challenge!'
+        : 'Opponent challenged!'
+      isBoutEnd = false
+    } else if (state.turnPhase === 'bout_end') {
       const boutWinner = state.boutWinners[state.currentBout - 1]
       const iWon = boutWinner === state.player
       message = iWon
-        ? `You win Bout ${state.currentBout}! Next bout starting…`
-        : `Opponent wins Bout ${state.currentBout}. Next bout starting…`
+        ? `You win Bout ${state.currentBout}!`
+        : `Opponent wins Bout ${state.currentBout}.`
       isBoutEnd = true
     } else if (state.turnPhase === 'attack' && !isMyTurn) {
       message = 'Opponent is attacking…'
@@ -29,8 +34,6 @@ export default function PhaseToast() {
       message = 'Your turn: Block!'
     } else if (state.turnPhase === 'resolve') {
       message = 'Resolving…'
-    } else if (state.turnPhase === 'resupply') {
-      message = 'Resupplying…'
     }
 
     if (message) {

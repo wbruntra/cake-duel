@@ -15,6 +15,8 @@ import {
   ackBoutEnd,
   determineBoutWinnerOnPass,
   resolveChallenge,
+  toChallengeResult,
+  ackChallengeResult,
 } from '../game/engine'
 import type { GameState, Player } from '../game/types'
 import { opponent } from '../game/types'
@@ -29,8 +31,10 @@ export type WsData = {
 
 const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>()
 const boutTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const challengeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const BOUT_ACK_TIMEOUT_MS = 30000
+const CHALLENGE_ACK_TIMEOUT_MS = 15000
 
 function scheduleBoutAutoAdvance(gameId: string) {
   clearBoutTimer(gameId)
@@ -45,6 +49,22 @@ function scheduleBoutAutoAdvance(gameId: string) {
   boutTimers.set(gameId, timer)
 }
 
+function scheduleChallengeAutoAdvance(gameId: string) {
+  clearChallengeTimer(gameId)
+  const timer = setTimeout(async () => {
+    challengeTimers.delete(gameId)
+    const state = await loadGame(gameId)
+    if (!state || state.turnPhase !== 'challenge_result' || !state.challengeResult) return
+    const afterFinish = finishBout(state, state.challengeResult.boutWinner)
+    await saveGame(afterFinish)
+    broadcast(afterFinish)
+    if (afterFinish.turnPhase === 'bout_end') {
+      scheduleBoutAutoAdvance(gameId)
+    }
+  }, CHALLENGE_ACK_TIMEOUT_MS)
+  challengeTimers.set(gameId, timer)
+}
+
 function clearBoutTimer(gameId: string) {
   const timer = boutTimers.get(gameId)
   if (timer) {
@@ -53,10 +73,12 @@ function clearBoutTimer(gameId: string) {
   }
 }
 
-function makeBoutEndState(state: GameState, boutWinner: Player): GameState {
-  const newWinners = [...state.boutWinners]
-  newWinners[state.currentBout - 1] = boutWinner
-  return { ...state, boutWinners: newWinners, turnPhase: 'bout_end' }
+function clearChallengeTimer(gameId: string) {
+  const timer = challengeTimers.get(gameId)
+  if (timer) {
+    clearTimeout(timer)
+    challengeTimers.delete(gameId)
+  }
 }
 
 function parseGame(row: GameRow): GameState {
@@ -81,7 +103,10 @@ function parseGame(row: GameRow): GameState {
     attackClaim: row.attackClaim ? JSON.parse(row.attackClaim) : null,
     blockClaim: row.blockClaim ? JSON.parse(row.blockClaim) : null,
     passedLast: row.passedLast as Player | null,
-    boutEndAcks: JSON.parse(row.boutEndAcks),
+    boutEndAcks: JSON.parse(row.boutEndAcks || '[]'),
+    challengeResult: row.challengeResult ? JSON.parse(row.challengeResult) : null,
+    challengeAcks: JSON.parse(row.challengeAcks || '[]'),
+    lastTurnResult: row.lastTurnResult ? JSON.parse(row.lastTurnResult) : null,
   }
 }
 
@@ -107,6 +132,9 @@ function setGameFields(state: GameState) {
     blockClaim: state.blockClaim ? JSON.stringify(state.blockClaim) : null,
     passedLast: state.passedLast || null,
     boutEndAcks: JSON.stringify(state.boutEndAcks),
+    challengeResult: state.challengeResult ? JSON.stringify(state.challengeResult) : null,
+    challengeAcks: JSON.stringify(state.challengeAcks),
+    lastTurnResult: state.lastTurnResult ? JSON.stringify(state.lastTurnResult) : null,
   }
 }
 
@@ -186,6 +214,7 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
           send(ws, { type: 'error', message: result.error })
           return
         }
+        clearChallengeTimer(gameId)
         await saveGame(result.state)
         broadcast(result.state)
         break
@@ -211,7 +240,7 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
         break
       }
       case 'resolve': {
-        const { state: resolved, boutOver, attackerWins } = resolveTurn(state)
+        const { state: resolved, turnResult, boutOver, attackerWins } = resolveTurn(state)
         if (boutOver) {
           const boutWinner: Player = attackerWins
             ? (state.attackClaim!.player as Player)
@@ -223,7 +252,7 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
             scheduleBoutAutoAdvance(gameId)
           }
         } else {
-          const supplied = resupply(resolved)
+          const supplied = resupply({ ...resolved, lastTurnResult: turnResult })
           await saveGame(supplied)
           broadcast(supplied)
         }
@@ -277,12 +306,29 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
           send(ws, { type: 'error', message: result.error })
           return
         }
-        const challengeWinner = result.boutWinner as Player
-        const afterFinish = finishBout(result.state, challengeWinner)
-        await saveGame(afterFinish)
-        broadcast(afterFinish)
-        if (afterFinish.turnPhase === 'bout_end') {
-          scheduleBoutAutoAdvance(gameId)
+        const challengeState = toChallengeResult(result.state, result.challengeResult)
+        await saveGame(challengeState)
+        broadcast(challengeState)
+        scheduleChallengeAutoAdvance(gameId)
+        break
+      }
+      case 'challengeAck': {
+        const ackResult = ackChallengeResult(state, player)
+        if (ackResult.error) {
+          send(ws, { type: 'error', message: ackResult.error })
+          return
+        }
+        if (ackResult.bothAcked) {
+          clearChallengeTimer(gameId)
+          const afterFinish = finishBout(ackResult.state, state.challengeResult!.boutWinner)
+          await saveGame(afterFinish)
+          broadcast(afterFinish)
+          if (afterFinish.turnPhase === 'bout_end') {
+            scheduleBoutAutoAdvance(gameId)
+          }
+        } else {
+          await saveGame(ackResult.state)
+          broadcast(ackResult.state)
         }
         break
       }

@@ -1,6 +1,8 @@
 import { useGame } from '@/context/GameContext'
 import Card from './Card'
 import BoutEndScreen from './BoutEndScreen'
+import ChallengeResultScreen from './ChallengeResultScreen'
+import TurnResultOverlay from './TurnResultOverlay'
 import { getCardInfo } from '@/utils/cards'
 import { motion } from 'motion/react'
 
@@ -8,7 +10,7 @@ const PHASE_STYLES = {
   attack: 'bg-attack-light text-attack',
   block: 'bg-block-light text-block',
   resolve: 'bg-resolve-light text-resolve',
-  resupply: 'bg-code-bg text-text',
+  challenge_result: 'bg-danger-light text-danger',
   game_over: 'bg-accent-light text-accent',
 }
 
@@ -18,6 +20,10 @@ export default function PlayArea() {
 
   if (state.turnPhase === 'bout_end') {
     return <BoutEndScreen />
+  }
+
+  if (state.turnPhase === 'challenge_result') {
+    return <ChallengeResultScreen />
   }
 
   if (state.turnPhase === 'game_over') {
@@ -38,7 +44,7 @@ export default function PlayArea() {
     attack: isMyTurn ? 'Your Attack' : "Opponent's Attack",
     block: isMyTurn ? 'Your Block' : "Opponent's Block",
     resolve: 'Resolving',
-    resupply: 'Resupplying',
+    challenge_result: 'Challenge!',
   }
 
   const attackerCardInfo = state.attackClaim ? getCardInfo(state.attackClaim.cardName) : null
@@ -47,7 +53,7 @@ export default function PlayArea() {
   const isWaiting = !isMyTurn && (state.turnPhase === 'attack' || state.turnPhase === 'block')
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 min-h-0">
+    <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 min-h-0 relative">
       <motion.div
         key={state.turnPhase}
         initial={{ opacity: 0, scale: 0.9 }}
@@ -105,6 +111,8 @@ export default function PlayArea() {
             : 'Waiting for opponent to block…'}
         </div>
       )}
+
+      <TurnResultOverlay />
     </div>
   )
 }
