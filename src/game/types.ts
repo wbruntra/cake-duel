@@ -1,5 +1,12 @@
 export type CardType = 'weapon' | 'magic' | 'special' | 'blocker' | 'unclaimable'
-export type TurnPhase = 'attack' | 'block' | 'resolve' | 'challenge_result' | 'bout_end' | 'game_over'
+export type TurnPhase =
+  | 'attack'
+  | 'block'
+  | 'resolve'
+  | 'turn_resolution'
+  | 'challenge_result'
+  | 'bout_end'
+  | 'game_over'
 export type GameStatus = 'waiting' | 'playing' | 'finished'
 export type Player = 'p1' | 'p2'
 
@@ -62,6 +69,7 @@ export interface GameState {
   challengeResult: ChallengeResult | null
   challengeAcks: Player[]
   lastTurnResult: TurnResult | null
+  turnAcks: Player[]
 }
 
 export function getHand(state: GameState, player: Player): string[] {
@@ -80,10 +88,7 @@ export function opponent(player: Player): Player {
   return player === 'p1' ? 'p2' : 'p1'
 }
 
-export function getChallengeResultForPlayer(
-  result: ChallengeResult,
-  player: Player,
-) {
+export function getChallengeResultForPlayer(result: ChallengeResult, player: Player) {
   return {
     target: result.target,
     challenger: result.challenger,

@@ -53,6 +53,7 @@ export function newBout(state: GameState, startingPlayer: Player): GameState {
     challengeResult: null,
     challengeAcks: [],
     boutEndAcks: [],
+    turnAcks: [],
   }
 }
 
@@ -185,7 +186,13 @@ export function resolveTurn(state: GameState): {
   if (!state.attackClaim) {
     return {
       state,
-      turnResult: { attackClaim: null as any, blockClaim: null, cakesStolen: 0, defenderCakes: 0, boutOver: false },
+      turnResult: {
+        attackClaim: null as any,
+        blockClaim: null,
+        cakesStolen: 0,
+        defenderCakes: 0,
+        boutOver: false,
+      },
       boutOver: false,
       attackerWins: false,
     }
@@ -227,10 +234,39 @@ export function resolveTurn(state: GameState): {
   return { state: next, turnResult, boutOver, attackerWins }
 }
 
+export function toTurnResolution(state: GameState, turnResult: TurnResult): GameState {
+  return {
+    ...state,
+    turnPhase: 'turn_resolution',
+    lastTurnResult: turnResult,
+    turnAcks: [],
+  }
+}
+
+export function ackTurnResolution(
+  state: GameState,
+  player: Player,
+): { state: GameState; bothAcked: boolean; error?: string } {
+  if (state.turnPhase !== 'turn_resolution') {
+    return { state, bothAcked: false, error: 'Not in turn_resolution phase' }
+  }
+  const acks = state.turnAcks.includes(player) ? state.turnAcks : [...state.turnAcks, player]
+  return {
+    state: { ...state, turnAcks: acks },
+    bothAcked: acks.length === 2,
+  }
+}
+
 export function resupply(state: GameState): GameState {
   let { deck } = state
   if (!state.attackClaim)
-    return { ...state, turnPhase: 'attack', turnPlayer: opponent(state.turnPlayer!), lastTurnResult: null }
+    return {
+      ...state,
+      turnPhase: 'attack',
+      turnPlayer: opponent(state.turnPlayer!),
+      lastTurnResult: null,
+      turnAcks: [],
+    }
 
   const attacker = state.attackClaim.player
   const defender = opponent(attacker)
@@ -256,6 +292,7 @@ export function resupply(state: GameState): GameState {
     attackClaim: null,
     blockClaim: null,
     lastTurnResult: null,
+    turnAcks: [],
   }
 }
 
@@ -350,9 +387,7 @@ export function resolveChallenge(
     if (state.turnPlayer !== challenger) return { state, error: 'Not your turn' }
     if (!state.attackClaim) return { state, error: 'No attack claim to challenge' }
     const claimWasTruthful = isClaimTruthful(state.attackClaim)
-    const boutWinner: Player = claimWasTruthful
-      ? state.attackClaim.player
-      : challenger
+    const boutWinner: Player = claimWasTruthful ? state.attackClaim.player : challenger
     const revealedCardNames = state.attackClaim.playedCardIds.map(
       (id) => getCardById(id)?.name ?? 'Unknown',
     )
@@ -375,9 +410,7 @@ export function resolveChallenge(
     return { state, error: 'Only the attacker can challenge a block' }
   if (!state.blockClaim) return { state, error: 'No block claim to challenge' }
   const claimWasTruthful = isClaimTruthful(state.blockClaim)
-  const boutWinner: Player = claimWasTruthful
-    ? state.blockClaim.player
-    : challenger
+  const boutWinner: Player = claimWasTruthful ? state.blockClaim.player : challenger
   const revealedCardNames = state.blockClaim.playedCardIds.map(
     (id) => getCardById(id)?.name ?? 'Unknown',
   )
@@ -393,10 +426,7 @@ export function resolveChallenge(
   }
 }
 
-export function toChallengeResult(
-  state: GameState,
-  challengeResult: ChallengeResult,
-): GameState {
+export function toChallengeResult(state: GameState, challengeResult: ChallengeResult): GameState {
   return {
     ...state,
     turnPhase: 'challenge_result',
@@ -444,6 +474,7 @@ export function stateForPlayer(state: GameState, player: Player) {
       ? getChallengeResultForPlayer(state.challengeResult, player)
       : null,
     challengeAcks: state.challengeAcks,
+    turnAcks: state.turnAcks,
     lastTurnResult: state.lastTurnResult
       ? {
           attackClaim: state.lastTurnResult.attackClaim,
@@ -458,10 +489,7 @@ export function stateForPlayer(state: GameState, player: Player) {
   }
 }
 
-function getChallengeResultForPlayer(
-  result: ChallengeResult,
-  player: Player,
-) {
+function getChallengeResultForPlayer(result: ChallengeResult, player: Player) {
   return {
     target: result.target,
     challenger: result.challenger,

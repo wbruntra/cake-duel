@@ -17,6 +17,8 @@ import {
   resolveChallenge,
   toChallengeResult,
   ackChallengeResult,
+  toTurnResolution,
+  ackTurnResolution,
 } from '../game/engine'
 import type { GameState, Player } from '../game/types'
 import { opponent } from '../game/types'
@@ -32,9 +34,11 @@ export type WsData = {
 const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>()
 const boutTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const challengeTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const turnResolutionTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const BOUT_ACK_TIMEOUT_MS = 30000
 const CHALLENGE_ACK_TIMEOUT_MS = 15000
+const TURN_RESOLUTION_TIMEOUT_MS = 12000
 
 function scheduleBoutAutoAdvance(gameId: string) {
   clearBoutTimer(gameId)
@@ -81,6 +85,42 @@ function clearChallengeTimer(gameId: string) {
   }
 }
 
+function clearTurnResolutionTimer(gameId: string) {
+  const timer = turnResolutionTimers.get(gameId)
+  if (timer) {
+    clearTimeout(timer)
+    turnResolutionTimers.delete(gameId)
+  }
+}
+
+async function advancePastTurnResolution(gameId: string, state: GameState) {
+  if (state.lastTurnResult?.boutOver) {
+    const attacker = state.attackClaim!.player
+    const boutWinner: Player = state.lastTurnResult.cakesStolen > 0 ? attacker : opponent(attacker)
+    const afterFinish = finishBout(state, boutWinner)
+    await saveGame(afterFinish)
+    broadcast(afterFinish)
+    if (afterFinish.turnPhase === 'bout_end') {
+      scheduleBoutAutoAdvance(gameId)
+    }
+    return
+  }
+  const supplied = resupply(state)
+  await saveGame(supplied)
+  broadcast(supplied)
+}
+
+function scheduleTurnResolutionAutoAdvance(gameId: string) {
+  clearTurnResolutionTimer(gameId)
+  const timer = setTimeout(async () => {
+    turnResolutionTimers.delete(gameId)
+    const state = await loadGame(gameId)
+    if (!state || state.turnPhase !== 'turn_resolution') return
+    await advancePastTurnResolution(gameId, state)
+  }, TURN_RESOLUTION_TIMEOUT_MS)
+  turnResolutionTimers.set(gameId, timer)
+}
+
 function parseGame(row: GameRow): GameState {
   return {
     id: row.id,
@@ -107,6 +147,7 @@ function parseGame(row: GameRow): GameState {
     challengeResult: row.challengeResult ? JSON.parse(row.challengeResult) : null,
     challengeAcks: JSON.parse(row.challengeAcks || '[]'),
     lastTurnResult: row.lastTurnResult ? JSON.parse(row.lastTurnResult) : null,
+    turnAcks: JSON.parse(row.turnAcks || '[]'),
   }
 }
 
@@ -135,6 +176,7 @@ function setGameFields(state: GameState) {
     challengeResult: state.challengeResult ? JSON.stringify(state.challengeResult) : null,
     challengeAcks: JSON.stringify(state.challengeAcks),
     lastTurnResult: state.lastTurnResult ? JSON.stringify(state.lastTurnResult) : null,
+    turnAcks: JSON.stringify(state.turnAcks),
   }
 }
 
@@ -240,21 +282,25 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
         break
       }
       case 'resolve': {
-        const { state: resolved, turnResult, boutOver, attackerWins } = resolveTurn(state)
-        if (boutOver) {
-          const boutWinner: Player = attackerWins
-            ? (state.attackClaim!.player as Player)
-            : (opponent(state.attackClaim!.player) as Player)
-          const afterFinish = finishBout(resolved, boutWinner)
-          await saveGame(afterFinish)
-          broadcast(afterFinish)
-          if (afterFinish.turnPhase === 'bout_end') {
-            scheduleBoutAutoAdvance(gameId)
-          }
+        const { state: resolved, turnResult } = resolveTurn(state)
+        const next = toTurnResolution(resolved, turnResult)
+        await saveGame(next)
+        broadcast(next)
+        scheduleTurnResolutionAutoAdvance(gameId)
+        break
+      }
+      case 'turnAck': {
+        const ackResult = ackTurnResolution(state, player)
+        if (ackResult.error) {
+          send(ws, { type: 'error', message: ackResult.error })
+          return
+        }
+        if (ackResult.bothAcked) {
+          clearTurnResolutionTimer(gameId)
+          await advancePastTurnResolution(gameId, ackResult.state)
         } else {
-          const supplied = resupply({ ...resolved, lastTurnResult: turnResult })
-          await saveGame(supplied)
-          broadcast(supplied)
+          await saveGame(ackResult.state)
+          broadcast(ackResult.state)
         }
         break
       }

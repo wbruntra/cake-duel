@@ -33,9 +33,7 @@ export default function ChallengeResultScreen() {
         transition={{ duration: 0.35, delay: 0.05 }}
         className="flex flex-col items-center gap-4 w-full max-w-sm"
       >
-        <div className="text-xs uppercase tracking-widest text-text font-medium">
-          Challenge!
-        </div>
+        <div className="text-xs uppercase tracking-widest text-text font-medium">Challenge!</div>
 
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -48,15 +46,12 @@ export default function ChallengeResultScreen() {
 
         <div className="flex flex-col items-center gap-1 mt-1">
           <span className="text-sm text-text">
-            {challengeResult.iChallenged ? 'You challenged' : 'Opponent challenged'} the {targetLabel}
+            {challengeResult.iChallenged ? 'You challenged' : 'Opponent challenged'} the{' '}
+            {targetLabel}
           </span>
           <div className="flex items-center gap-2 mt-1">
-            <span className={`text-2xl font-bold ${truthfulColor}`}>
-              {truthfulEmoji}
-            </span>
-            <span className={`text-lg font-semibold ${truthfulColor}`}>
-              {truthfulLabel}
-            </span>
+            <span className={`text-2xl font-bold ${truthfulColor}`}>{truthfulEmoji}</span>
+            <span className={`text-lg font-semibold ${truthfulColor}`}>{truthfulLabel}</span>
           </div>
         </div>
 
@@ -65,7 +60,8 @@ export default function ChallengeResultScreen() {
           <div className="flex flex-wrap justify-center gap-1">
             {challengeResult.revealedCardNames.map((name, i) => (
               <span key={i} className="text-sm font-medium text-text-h">
-                {name}{i < challengeResult.revealedCardNames.length - 1 ? ',' : ''}
+                {name}
+                {i < challengeResult.revealedCardNames.length - 1 ? ',' : ''}
               </span>
             ))}
           </div>
@@ -73,7 +69,9 @@ export default function ChallengeResultScreen() {
 
         <div className="text-sm text-text mt-1">
           This bout goes to{' '}
-          <span className={`font-semibold ${challengeResult.iWon ? 'text-attack' : 'text-danger'}`}>
+          <span
+            className={`font-semibold ${challengeResult.iWon ? 'text-attack' : 'text-danger'}`}
+          >
             {challengeResult.iWon ? 'you' : 'opponent'}
           </span>
         </div>

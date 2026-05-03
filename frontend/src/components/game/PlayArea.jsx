@@ -26,6 +26,10 @@ export default function PlayArea() {
     return <ChallengeResultScreen />
   }
 
+  if (state.turnPhase === 'turn_resolution') {
+    return <TurnResultOverlay />
+  }
+
   if (state.turnPhase === 'game_over') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-6 px-4">
@@ -111,8 +115,6 @@ export default function PlayArea() {
             : 'Waiting for opponent to block…'}
         </div>
       )}
-
-      <TurnResultOverlay />
     </div>
   )
 }

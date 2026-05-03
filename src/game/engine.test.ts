@@ -16,6 +16,8 @@ import {
   toChallengeResult,
   ackChallengeResult,
   resolveChallenge,
+  toTurnResolution,
+  ackTurnResolution,
 } from './engine'
 import { createDeck } from './cards'
 import type { GameState, Claim } from './types'
@@ -46,6 +48,7 @@ function baseState(overrides: Partial<GameState> = {}): GameState {
     challengeResult: null,
     challengeAcks: [],
     lastTurnResult: null,
+    turnAcks: [],
     ...overrides,
   }
 }
@@ -1394,6 +1397,65 @@ describe('toChallengeResult', () => {
     expect(result.turnPhase).toBe('challenge_result')
     expect(result.challengeResult).toBe(challengeResult)
     expect(result.challengeAcks).toEqual([])
+  })
+})
+
+describe('toTurnResolution', () => {
+  test('sets phase, stores result, resets acks', () => {
+    const attackClaim: Claim = {
+      cardName: 'Soldier',
+      count: 2,
+      player: 'p1',
+      playedCardIds: ['s1', 's2'],
+    }
+    const state = baseState({ turnPhase: 'resolve', attackClaim, turnAcks: ['p1'] })
+    const turnResult = {
+      attackClaim,
+      blockClaim: null,
+      cakesStolen: 2,
+      defenderCakes: 2,
+      boutOver: false,
+    }
+    const next = toTurnResolution(state, turnResult)
+
+    expect(next.turnPhase).toBe('turn_resolution')
+    expect(next.lastTurnResult).toBe(turnResult)
+    expect(next.turnAcks).toEqual([])
+  })
+})
+
+describe('ackTurnResolution', () => {
+  test('first ack returns bothAcked false', () => {
+    const state = baseState({ turnPhase: 'turn_resolution', turnAcks: [] })
+    const result = ackTurnResolution(state, 'p1')
+
+    expect(result.error).toBeUndefined()
+    expect(result.bothAcked).toBe(false)
+    expect(result.state.turnAcks).toEqual(['p1'])
+  })
+
+  test('second ack returns bothAcked true', () => {
+    const state = baseState({ turnPhase: 'turn_resolution', turnAcks: ['p1'] })
+    const result = ackTurnResolution(state, 'p2')
+
+    expect(result.bothAcked).toBe(true)
+    expect(result.state.turnAcks).toEqual(['p1', 'p2'])
+  })
+
+  test('is idempotent', () => {
+    const state = baseState({ turnPhase: 'turn_resolution', turnAcks: ['p1'] })
+    const result = ackTurnResolution(state, 'p1')
+
+    expect(result.bothAcked).toBe(false)
+    expect(result.state.turnAcks).toEqual(['p1'])
+  })
+
+  test('error when not in turn_resolution phase', () => {
+    const state = baseState({ turnPhase: 'attack', turnAcks: [] })
+    const result = ackTurnResolution(state, 'p1')
+
+    expect(result.error).toBe('Not in turn_resolution phase')
+    expect(result.bothAcked).toBe(false)
   })
 })
 

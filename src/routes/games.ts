@@ -36,6 +36,7 @@ function parseGameRow(row: any): GameState {
     challengeResult: row.challengeResult ? JSON.parse(row.challengeResult) : null,
     challengeAcks: JSON.parse(row.challengeAcks || '[]'),
     lastTurnResult: row.lastTurnResult ? JSON.parse(row.lastTurnResult) : null,
+    turnAcks: JSON.parse(row.turnAcks || '[]'),
   }
 }
 
@@ -66,6 +67,7 @@ function serializeGameState(state: GameState) {
     challengeResult: state.challengeResult ? JSON.stringify(state.challengeResult) : null,
     challengeAcks: JSON.stringify(state.challengeAcks),
     lastTurnResult: state.lastTurnResult ? JSON.stringify(state.lastTurnResult) : null,
+    turnAcks: JSON.stringify(state.turnAcks),
   }
 }
 
@@ -100,6 +102,7 @@ app.post('/api/games', async (c) => {
     challengeResult: null,
     challengeAcks: [],
     lastTurnResult: null,
+    turnAcks: [],
   }
 
   await db.insert(games).values({
