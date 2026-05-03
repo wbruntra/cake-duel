@@ -20,6 +20,10 @@ export default defineConfig({
       '/ws': {
         target: 'ws://localhost:9001',
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', () => {})
+          proxy.on('proxyReqWsError', () => {})
+        },
       },
     },
   },

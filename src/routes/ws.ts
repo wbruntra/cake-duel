@@ -26,6 +26,12 @@ export type WsData = {
 
 const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>()
 
+function makeBoutEndState(state: GameState, boutWinner: Player): GameState {
+  const newWinners = [...state.boutWinners]
+  newWinners[state.currentBout - 1] = boutWinner
+  return { ...state, boutWinners: newWinners, turnPhase: 'bout_end' }
+}
+
 function parseGame(row: GameRow): GameState {
   return {
     id: row.id,
@@ -181,9 +187,11 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
           const boutWinner: Player = attackerWins
             ? (state.attackClaim!.player as Player)
             : (opponent(state.attackClaim!.player) as Player)
+          const boutEndState = makeBoutEndState(resolved, boutWinner)
           const afterEnd = endBout(resolved, boutWinner)
           await saveGame(afterEnd)
-          broadcast(afterEnd)
+          broadcast(boutEndState)
+          setTimeout(() => broadcast(afterEnd), 3000)
         } else {
           const supplied = resupply(resolved)
           await saveGame(supplied)
@@ -199,9 +207,11 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
         }
         if (result.doublePass) {
           const boutWinner = determineBoutWinnerOnPass(result.state)
+          const boutEndState = makeBoutEndState(result.state, boutWinner)
           const afterEnd = endBout(result.state, boutWinner)
           await saveGame(afterEnd)
-          broadcast(afterEnd)
+          broadcast(boutEndState)
+          setTimeout(() => broadcast(afterEnd), 3000)
         } else {
           await saveGame(result.state)
           broadcast(result.state)

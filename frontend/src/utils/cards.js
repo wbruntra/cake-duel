@@ -4,24 +4,21 @@ const CARD_INFO = {
     type: 'weapon',
     cakes: 1,
     emoji: '⚔️',
-    image:
-      'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-01-33-337Z.jpg',
+    image: '/cards/soldier.webp',
   },
   archer: {
     name: 'Archer',
     type: 'weapon',
     cakes: 1,
     emoji: '🏹',
-    image:
-      'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-33-522Z.jpg',
+    image: '/cards/archer.webp',
   },
   wizard: {
     name: 'Wizard',
     type: 'magic',
     cakes: 2,
     emoji: '🧙',
-    image:
-      'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-49-654Z.jpg',
+    image: '/cards/wizard.webp',
   },
   defender: {
     name: 'Defender',
@@ -29,8 +26,7 @@ const CARD_INFO = {
     blocks: 1,
     blocksType: 'weapon',
     emoji: '🛡️',
-    image:
-      'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-00-525Z.jpg',
+    image: '/cards/defender.webp',
   },
   scientist: {
     name: 'Scientist',
@@ -38,15 +34,13 @@ const CARD_INFO = {
     blocks: 1,
     blocksType: 'magic',
     emoji: '🔬',
-    image:
-      'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-09-904Z.jpg',
+    image: '/cards/scientist.webp',
   },
   sir_wolfy: {
     name: 'Sir Wolfy',
     type: 'unclaimable',
     emoji: '🐺',
-    image:
-      'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-22-716Z.jpg',
+    image: '/cards/sir_wolfy.webp',
   },
 }
 
@@ -92,6 +86,8 @@ export function getCardTypeLabel(type) {
   }
   return labels[type] || type
 }
+
+export const CARD_BACK_IMAGE = '/cards/card-back.svg'
 
 export const ATTACKER_NAMES = getAttackerOptions().map((o) => o.name)
 export const BLOCKER_NAMES = Object.values(CARD_INFO)

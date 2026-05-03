@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#E89020"/>
+  <!-- ground shadow -->
+  <ellipse cx="50" cy="90" rx="22" ry="4.5" fill="#1a1a2e" opacity="0.3"/>
+  <!-- legs -->
+  <rect x="37" y="78" width="8" height="12" rx="4" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <rect x="55" y="78" width="8" height="12" rx="4" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- body -->
+  <circle cx="50" cy="65" r="17" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- cloak (dark forest-green hooded, wraps body) -->
+  <ellipse cx="50" cy="64" rx="20" ry="19" fill="#2D5A27" stroke="#1A3A18" stroke-width="2"/>
+  <!-- cloak hood sides -->
+  <path d="M34 50 Q30 42 34 35 L40 38 Q36 46 38 52 Z" fill="#2D5A27" stroke="#1A3A18" stroke-width="2"/>
+  <path d="M66 50 Q70 42 66 35 L60 38 Q64 46 62 52 Z" fill="#2D5A27" stroke="#1A3A18" stroke-width="2"/>
+  <!-- face peeking from hood -->
+  <circle cx="50" cy="43" r="12" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- hood opening border -->
+  <path d="M38 43 Q50 55 62 43" fill="none" stroke="#1A3A18" stroke-width="2"/>
+  <!-- squinting eyes (lines instead of circles) -->
+  <line x1="42" y1="42" x2="46" y2="42" stroke="#2C1810" stroke-width="2" stroke-linecap="round"/>
+  <line x1="54" y1="42" x2="58" y2="42" stroke="#2C1810" stroke-width="2" stroke-linecap="round"/>
+  <!-- blush -->
+  <ellipse cx="40" cy="46" rx="2.5" ry="2" fill="#FFB0B0" opacity="0.4"/>
+  <ellipse cx="60" cy="46" rx="2.5" ry="2" fill="#FFB0B0" opacity="0.4"/>
+  <!-- focused mouth -->
+  <line x1="47" y1="48" x2="53" y2="48" stroke="#2C1810" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- left arm extends left holding bow -->
+  <rect x="18" y="56" width="16" height="7" rx="3" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- bow (curved arc) -->
+  <path d="M16 22 Q6 50 16 78" fill="none" stroke="#8B5E3C" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- bowstring (dashed) -->
+  <line x1="16" y1="22" x2="16" y2="78" stroke="#3A2010" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <!-- arrow -->
+  <line x1="16" y1="50" x2="52" y2="50" stroke="#8B5E3C" stroke-width="2"/>
+  <polygon points="52,48 60,50 52,52" fill="#999" stroke="#666" stroke-width="1"/>
+  <!-- arrow fletching -->
+  <path d="M22 48 L18 45 M22 48 L18 51 M22 52 L18 49 M22 52 L18 55" stroke="#CC3333" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
