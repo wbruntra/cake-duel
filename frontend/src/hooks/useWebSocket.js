@@ -49,7 +49,11 @@ export function useWebSocket(gameId, playerId) {
 
     return () => {
       active = false
-      ws.close()
+      if (ws.readyState === WebSocket.CONNECTING) {
+        ws.addEventListener('open', () => ws.close())
+      } else {
+        ws.close()
+      }
     }
   }, [gameId, playerId])
 

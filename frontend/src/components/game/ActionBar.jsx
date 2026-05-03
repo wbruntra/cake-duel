@@ -3,6 +3,9 @@ import { useGameUI } from '@/hooks/useGameUI'
 import { getCardInfo, getAttackerOptions, getBlockerName } from '@/utils/cards'
 import { tap } from '@/utils/haptics'
 
+const BAR_CLASS =
+  'sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 h-[108px] flex flex-col items-center justify-center gap-2'
+
 export default function ActionBar() {
   const { state, send, onLeave } = useGame()
   const { selectedIndices, claimedName, setClaimPickerOpen, clearSelection } = useGameUI()
@@ -16,6 +19,8 @@ export default function ActionBar() {
   const isGameOver = state.turnPhase === 'game_over'
   const isResupply = state.turnPhase === 'resupply'
   const isWaiting = !isMyTurn && (state.turnPhase === 'attack' || state.turnPhase === 'block')
+  const amAttacker = state.attackClaim?.player === state.player
+  const canChallengeBlock = isResolvePhase && amAttacker && state.blockClaim != null
 
   const attackerType = state.attackClaim
     ? getCardInfo(state.attackClaim.cardName)?.type || null
@@ -53,6 +58,11 @@ export default function ActionBar() {
     send({ type: 'resolve' })
   }
 
+  function doChallenge(target) {
+    tap()
+    send({ type: 'challenge', target })
+  }
+
   function doPlayAgain() {
     tap()
     onLeave()
@@ -62,16 +72,18 @@ export default function ActionBar() {
     const waitingText =
       state.turnPhase === 'attack' ? "Opponent's turn: Attack" : "Opponent's turn: Block"
     return (
-      <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-center min-h-[64px]">
+      <div className={BAR_CLASS}>
         <span className="text-text text-base italic">{waitingText}…</span>
+        <div className="h-5" />
       </div>
     )
   }
 
   if (isResupply) {
     return (
-      <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-center min-h-[64px]">
+      <div className={BAR_CLASS}>
         <span className="text-text text-base italic">Resupplying…</span>
+        <div className="h-5" />
       </div>
     )
   }
@@ -79,20 +91,21 @@ export default function ActionBar() {
   if (isAttackPhase) {
     if (selectedIndices.length === 0) {
       return (
-        <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-center min-h-[64px]">
+        <div className={BAR_CLASS}>
           <button
             className="w-full h-14 text-lg font-semibold rounded-lg border border-border text-text bg-transparent active:scale-95 transition-transform touch-manipulation"
             onClick={doPass}
           >
             Pass
           </button>
+          <div className="h-5" />
         </div>
       )
     }
 
     if (!claimedName) {
       return (
-        <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex flex-col gap-2 min-h-[64px]">
+        <div className={BAR_CLASS}>
           <button
             className="w-full h-14 text-lg font-semibold rounded-lg bg-accent text-white active:scale-95 transition-transform touch-manipulation"
             onClick={() => setClaimPickerOpen(true)}
@@ -108,7 +121,7 @@ export default function ActionBar() {
 
     const claimInfo = getAttackerOptions().find((o) => o.name === claimedName)
     return (
-      <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex flex-col gap-2 min-h-[64px]">
+      <div className={BAR_CLASS}>
         <button
           className="w-full h-14 text-lg font-semibold rounded-lg bg-attack text-white active:scale-95 transition-transform touch-manipulation"
           onClick={doAttack}
@@ -125,19 +138,22 @@ export default function ActionBar() {
   if (isBlockPhase) {
     if (selectedIndices.length === 0) {
       return (
-        <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-center min-h-[64px]">
+        <div className={BAR_CLASS}>
           <button
             className="w-full h-14 text-lg font-semibold rounded-lg border border-danger text-danger bg-transparent active:scale-95 transition-transform touch-manipulation"
             onClick={doSkipBlock}
           >
             Let through
           </button>
+          <button className="text-sm text-text underline" onClick={() => doChallenge('attack')}>
+            Challenge attack!
+          </button>
         </div>
       )
     }
 
     return (
-      <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex flex-col gap-2 min-h-[64px]">
+      <div className={BAR_CLASS}>
         <button
           className="w-full h-14 text-lg font-semibold rounded-lg bg-block text-white active:scale-95 transition-transform touch-manipulation"
           onClick={doBlock}
@@ -153,26 +169,34 @@ export default function ActionBar() {
 
   if (isResolvePhase) {
     return (
-      <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-center min-h-[64px]">
+      <div className={BAR_CLASS}>
         <button
           className="w-full h-14 text-lg font-semibold rounded-lg bg-resolve text-white active:scale-95 transition-transform touch-manipulation"
           onClick={doResolve}
         >
           Continue
         </button>
+        {canChallengeBlock ? (
+          <button className="text-sm text-text underline" onClick={() => doChallenge('block')}>
+            Challenge block!
+          </button>
+        ) : (
+          <div className="h-5" />
+        )}
       </div>
     )
   }
 
   if (isGameOver) {
     return (
-      <div className="sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-center min-h-[64px]">
+      <div className={BAR_CLASS}>
         <button
           className="w-full h-14 text-lg font-semibold rounded-lg bg-accent text-white active:scale-95 transition-transform touch-manipulation"
           onClick={doPlayAgain}
         >
           Play again
         </button>
+        <div className="h-5" />
       </div>
     )
   }

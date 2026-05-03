@@ -14,6 +14,7 @@ import {
   startNextBout,
   ackBoutEnd,
   determineBoutWinnerOnPass,
+  resolveChallenge,
 } from '../game/engine'
 import type { GameState, Player } from '../game/types'
 import { opponent } from '../game/types'
@@ -50,6 +51,12 @@ function clearBoutTimer(gameId: string) {
     clearTimeout(timer)
     boutTimers.delete(gameId)
   }
+}
+
+function makeBoutEndState(state: GameState, boutWinner: Player): GameState {
+  const newWinners = [...state.boutWinners]
+  newWinners[state.currentBout - 1] = boutWinner
+  return { ...state, boutWinners: newWinners, turnPhase: 'bout_end' }
 }
 
 function parseGame(row: GameRow): GameState {
@@ -256,6 +263,26 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
         } else {
           await saveGame(ackResult.state)
           broadcast(ackResult.state)
+        }
+        break
+      }
+      case 'challenge': {
+        const target = msg.target as 'attack' | 'block'
+        if (target !== 'attack' && target !== 'block') {
+          send(ws, { type: 'error', message: 'Invalid challenge target' })
+          return
+        }
+        const result = resolveChallenge(state, player, target)
+        if ('error' in result) {
+          send(ws, { type: 'error', message: result.error })
+          return
+        }
+        const challengeWinner = result.boutWinner as Player
+        const afterFinish = finishBout(result.state, challengeWinner)
+        await saveGame(afterFinish)
+        broadcast(afterFinish)
+        if (afterFinish.turnPhase === 'bout_end') {
+          scheduleBoutAutoAdvance(gameId)
         }
         break
       }

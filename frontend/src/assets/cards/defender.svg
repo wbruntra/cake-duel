@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#4CAF6E"/>
+  <!-- ground shadow -->
+  <ellipse cx="50" cy="90" rx="22" ry="4.5" fill="#1a1a2e" opacity="0.3"/>
+  <!-- legs -->
+  <rect x="36" y="78" width="9" height="12" rx="4" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <rect x="55" y="78" width="9" height="12" rx="4" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- donut body (outer circle with hole using evenodd) -->
+  <path d="M50 47 A18 18 0 1 1 49.99 47 Z M50 52 A8 8 0 1 0 50.01 52 Z" fill="#F5DEB3" stroke="#C4956A" stroke-width="2" fill-rule="evenodd"/>
+  <!-- frosting swirl on top of donut -->
+  <path d="M32 52 Q32 42 50 40 Q68 42 68 52" fill="#FF69B4" stroke="#CC3388" stroke-width="2" stroke-linecap="round"/>
+  <path d="M37 49 Q44 44 50 43 Q56 44 63 49" fill="none" stroke="#FF99CC" stroke-width="1.5"/>
+  <!-- drip details -->
+  <path d="M36 50 Q36 56 38 56 Q40 56 40 50" fill="#FF69B4" stroke="none"/>
+  <path d="M60 50 Q60 57 62 57 Q64 57 64 50" fill="#FF69B4" stroke="none"/>
+  <!-- left arm (wide stance) -->
+  <rect x="24" y="60" width="12" height="8" rx="3" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- right arm -->
+  <rect x="64" y="60" width="12" height="8" rx="3" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- neck -->
+  <rect x="45" y="32" width="10" height="6" rx="2" fill="#F5DEB3"/>
+  <!-- head -->
+  <circle cx="50" cy="26" r="13" fill="#F5DEB3" stroke="#C4956A" stroke-width="2"/>
+  <!-- face - determined eyes -->
+  <circle cx="44" cy="25" r="2" fill="#2C1810"/>
+  <circle cx="56" cy="25" r="2" fill="#2C1810"/>
+  <circle cx="44.6" cy="24.3" r="0.8" fill="white"/>
+  <circle cx="56.6" cy="24.3" r="0.8" fill="white"/>
+  <!-- determined eyebrows -->
+  <line x1="40" y1="22" x2="47" y2="23" stroke="#2C1810" stroke-width="2" stroke-linecap="round"/>
+  <line x1="60" y1="22" x2="53" y2="23" stroke="#2C1810" stroke-width="2" stroke-linecap="round"/>
+  <!-- blush -->
+  <ellipse cx="38" cy="29" rx="2.5" ry="2" fill="#FFB0B0" opacity="0.4"/>
+  <ellipse cx="62" cy="29" rx="2.5" ry="2" fill="#FFB0B0" opacity="0.4"/>
+  <!-- determined mouth -->
+  <line x1="46" y1="31" x2="54" y2="31" stroke="#2C1810" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- large circular shield (fills left half) -->
+  <circle cx="28" cy="52" r="20" fill="#C0C0C0" stroke="#888" stroke-width="2.5"/>
+  <!-- shield frosting-swirl emblem (nested circle) -->
+  <circle cx="28" cy="52" r="14" fill="#FF69B4" stroke="#CC3388" stroke-width="1.5"/>
+  <circle cx="28" cy="52" r="10" fill="none" stroke="#FF99CC" stroke-width="1"/>
+  <!-- small spiral in center -->
+  <path d="M25 52 Q28 48 31 52 Q28 56 25 52" fill="none" stroke="#CC3388" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

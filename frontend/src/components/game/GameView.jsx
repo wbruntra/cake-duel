@@ -8,12 +8,26 @@ import PhaseToast from './PhaseToast'
 import { useGame } from '@/context/GameContext'
 
 export default function GameView() {
-  const { state, connected } = useGame()
+  const { state, connected, error, onLeave } = useGame()
 
   if (!state) {
     return (
-      <div className="flex items-center justify-center min-h-dvh text-text">
-        {connected ? 'Waiting for game state...' : 'Connecting...'}
+      <div className="flex flex-col items-center justify-center min-h-dvh gap-4 text-text px-6">
+        {error ? (
+          <>
+            <p className="text-danger text-center">{error}</p>
+            <button
+              className="h-12 px-6 rounded-xl bg-accent text-white font-semibold active:scale-95 transition-transform touch-manipulation"
+              onClick={onLeave}
+            >
+              Back to Lobby
+            </button>
+          </>
+        ) : connected ? (
+          'Waiting for game state...'
+        ) : (
+          'Connecting...'
+        )}
       </div>
     )
   }

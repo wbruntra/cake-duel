@@ -35,3 +35,7 @@ https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-0
 
 Cute pastry wolf character, a cake-shaped wolf in knightly tattered cape, howling with mischievous grin, one paw clutching a stolen cake slice, flat vector illustration with bold outlines, dark navy/indigo background, minimalist style, mobile card game art, no text
 https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-22-716Z.jpg
+
+## Card Back
+
+Ornate symmetrical playing card back design, central circular medallion with a small stylized golden cake slice, decorative double border frame in warm brown and cream tones, tiny corner flourishes, flat vector illustration with bold outlines, warm parchment/cream background, minimalist style, mobile card game art, no text, readable at small sizes

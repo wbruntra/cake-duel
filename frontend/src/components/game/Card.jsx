@@ -1,4 +1,4 @@
-import { getCardInfo } from '@/utils/cards'
+import { getCardInfo, CARD_BACK_IMAGE } from '@/utils/cards'
 import { tap } from '@/utils/haptics'
 
 const SIZE_CLASSES = {
@@ -15,7 +15,7 @@ export default function Card({
   size = 'md',
   selectionOrder,
 }) {
-  const info = getCardInfo(cardId)
+  const info = cardId ? getCardInfo(cardId) : { name: '', image: '' }
   const sizeClasses = SIZE_CLASSES[size] || SIZE_CLASSES.md
 
   function handleClick() {
@@ -46,7 +46,12 @@ export default function Card({
         </span>
       )}
       {faceDown ? (
-        <span className="text-2xl sm:text-3xl">🃏</span>
+        <img
+          src={CARD_BACK_IMAGE}
+          alt="Card back"
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
       ) : (
         <>
           <img
