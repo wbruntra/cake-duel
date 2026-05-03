@@ -13,7 +13,9 @@ export const games = sqliteTable('games', {
   bout3Winner: text('bout3_winner'),
   winner: text('winner'),
   turnPlayer: text('turn_player'),
-  turnPhase: text('turn_phase', { enum: ['attack', 'block', 'resolve', 'resupply', 'bout_end'] }),
+  turnPhase: text('turn_phase', {
+    enum: ['attack', 'block', 'resolve', 'resupply', 'bout_end', 'game_over'],
+  }),
   p1Hand: text('p1_hand').notNull().default('[]'),
   p2Hand: text('p2_hand').notNull().default('[]'),
   p1Cakes: integer('p1_cakes').notNull().default(3),
@@ -28,6 +30,7 @@ export const games = sqliteTable('games', {
   blockCount: integer('block_count'),
   attackCards: text('attack_cards'),
   blockCards: text('block_cards'),
-  passedLast: integer('passed_last'),
+  passedLast: text('passed_last'),
+  boutEndAcks: text('bout_end_acks').notNull().default('[]'),
   createdAt: text('created_at').notNull(),
 })

@@ -9,6 +9,9 @@ import {
   resupply,
   stateForPlayer,
   endBout,
+  finishBout,
+  startNextBout,
+  ackBoutEnd,
   determineBoutWinnerOnPass,
 } from './engine'
 import { createDeck } from './cards'
@@ -36,6 +39,7 @@ function baseState(overrides: Partial<GameState> = {}): GameState {
     attackClaim: null,
     blockClaim: null,
     passedLast: null,
+    boutEndAcks: [],
     ...overrides,
   }
 }
@@ -1116,5 +1120,110 @@ describe('full game flow', () => {
     state = endBout(state, 'p2')
     expect(state.winner).toBe('p2')
     expect(state.status).toBe('finished')
+  })
+})
+
+describe('finishBout', () => {
+  test('records winner and sets bout_end phase', () => {
+    const state = baseState({ currentBout: 1, boutWinners: [null, null, null] })
+    const result = finishBout(state, 'p1')
+
+    expect(result.boutWinners[0]).toBe('p1')
+    expect(result.turnPhase).toBe('bout_end')
+    expect(result.boutEndAcks).toEqual([])
+    expect(result.status).toBe('playing')
+    expect(result.winner).toBeNull()
+  })
+
+  test('does not mutate hands or deck', () => {
+    const state = baseState({
+      currentBout: 1,
+      p1Hand: makeHand(['soldier']),
+      p2Hand: makeHand(['defender']),
+      deck: makeHand(['wizard', 'archer']),
+    })
+    const result = finishBout(state, 'p2')
+
+    expect(result.p1Hand).toEqual(state.p1Hand)
+    expect(result.p2Hand).toEqual(state.p2Hand)
+    expect(result.deck).toEqual(state.deck)
+    expect(result.currentBout).toBe(1)
+  })
+
+  test('deciding bout skips bout_end and goes to game_over', () => {
+    const state = baseState({ currentBout: 3, boutWinners: ['p1', 'p1', null] })
+    const result = finishBout(state, 'p1')
+
+    expect(result.winner).toBe('p1')
+    expect(result.status).toBe('finished')
+    expect(result.turnPhase).toBe('game_over')
+  })
+})
+
+describe('startNextBout', () => {
+  test('reshuffles deck and resets cakes', () => {
+    const state = baseState({
+      currentBout: 1,
+      boutWinners: ['p1', null, null],
+      p1Cakes: 0,
+      p2Cakes: 7,
+      p1Hand: makeHand(['soldier']),
+      p2Hand: makeHand(['defender']),
+      deck: makeHand(['wizard']),
+    })
+    const result = startNextBout(state)
+
+    expect(result.currentBout).toBe(2)
+    expect(result.p1Cakes).toBe(3)
+    expect(result.p2Cakes).toBe(4)
+    expect(result.p1Hand.length).toBe(4)
+    expect(result.p2Hand.length).toBe(4)
+    expect(result.turnPhase).toBe('attack')
+    expect(result.boutEndAcks).toEqual([])
+  })
+
+  test('loser of finished bout goes first', () => {
+    const state = baseState({
+      currentBout: 1,
+      boutWinners: ['p2', null, null],
+    })
+    const result = startNextBout(state)
+
+    expect(result.turnPlayer).toBe('p1')
+  })
+})
+
+describe('ackBoutEnd', () => {
+  test('first ack returns bothAcked false', () => {
+    const state = baseState({ turnPhase: 'bout_end', boutEndAcks: [] })
+    const result = ackBoutEnd(state, 'p1')
+
+    expect(result.error).toBeUndefined()
+    expect(result.bothAcked).toBe(false)
+    expect(result.state.boutEndAcks).toEqual(['p1'])
+  })
+
+  test('second ack returns bothAcked true', () => {
+    const state = baseState({ turnPhase: 'bout_end', boutEndAcks: ['p1'] })
+    const result = ackBoutEnd(state, 'p2')
+
+    expect(result.bothAcked).toBe(true)
+    expect(result.state.boutEndAcks).toEqual(['p1', 'p2'])
+  })
+
+  test('is idempotent', () => {
+    const state = baseState({ turnPhase: 'bout_end', boutEndAcks: ['p1'] })
+    const result = ackBoutEnd(state, 'p1')
+
+    expect(result.bothAcked).toBe(false)
+    expect(result.state.boutEndAcks).toEqual(['p1'])
+  })
+
+  test('error when not in bout_end phase', () => {
+    const state = baseState({ turnPhase: 'attack', boutEndAcks: [] })
+    const result = ackBoutEnd(state, 'p1')
+
+    expect(result.error).toBe('Not in bout_end phase')
+    expect(result.bothAcked).toBe(false)
   })
 })

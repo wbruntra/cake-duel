@@ -32,10 +32,11 @@ function parseGameRow(row: any): GameState {
     attackClaim: row.attackClaim ? JSON.parse(row.attackClaim) : null,
     blockClaim: row.blockClaim ? JSON.parse(row.blockClaim) : null,
     passedLast: row.passedLast,
+    boutEndAcks: JSON.parse(row.boutEndAcks || '[]'),
   }
 }
 
-function serializeGameState(state: GameState): Record<string, any> {
+function serializeGameState(state: GameState) {
   return {
     status: state.status,
     player1Id: state.player1Id,
@@ -58,6 +59,7 @@ function serializeGameState(state: GameState): Record<string, any> {
     attackClaim: state.attackClaim ? JSON.stringify(state.attackClaim) : null,
     blockClaim: state.blockClaim ? JSON.stringify(state.blockClaim) : null,
     passedLast: state.passedLast,
+    boutEndAcks: JSON.stringify(state.boutEndAcks),
   }
 }
 
@@ -88,6 +90,7 @@ app.post('/api/games', async (c) => {
     attackClaim: null,
     blockClaim: null,
     passedLast: null,
+    boutEndAcks: [],
   }
 
   await db.insert(games).values({

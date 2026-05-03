@@ -1,5 +1,5 @@
 export type CardType = 'weapon' | 'magic' | 'special' | 'blocker' | 'unclaimable'
-export type TurnPhase = 'attack' | 'block' | 'resolve' | 'resupply' | 'bout_end'
+export type TurnPhase = 'attack' | 'block' | 'resolve' | 'resupply' | 'bout_end' | 'game_over'
 export type GameStatus = 'waiting' | 'playing' | 'finished'
 export type Player = 'p1' | 'p2'
 
@@ -42,6 +42,7 @@ export interface GameState {
   attackClaim: Claim | null
   blockClaim: Claim | null
   passedLast: Player | null
+  boutEndAcks: Player[]
 }
 
 export function getHand(state: GameState, player: Player): string[] {

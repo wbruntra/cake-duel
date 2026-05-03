@@ -10,7 +10,9 @@ import {
   resolveTurn,
   resupply,
   stateForPlayer,
-  endBout,
+  finishBout,
+  startNextBout,
+  ackBoutEnd,
   determineBoutWinnerOnPass,
 } from '../game/engine'
 import type { GameState, Player } from '../game/types'
@@ -25,6 +27,30 @@ export type WsData = {
 }
 
 const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>()
+const boutTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+const BOUT_ACK_TIMEOUT_MS = 30000
+
+function scheduleBoutAutoAdvance(gameId: string) {
+  clearBoutTimer(gameId)
+  const timer = setTimeout(async () => {
+    boutTimers.delete(gameId)
+    const state = await loadGame(gameId)
+    if (!state || state.turnPhase !== 'bout_end') return
+    const next = startNextBout(state)
+    await saveGame(next)
+    broadcast(next)
+  }, BOUT_ACK_TIMEOUT_MS)
+  boutTimers.set(gameId, timer)
+}
+
+function clearBoutTimer(gameId: string) {
+  const timer = boutTimers.get(gameId)
+  if (timer) {
+    clearTimeout(timer)
+    boutTimers.delete(gameId)
+  }
+}
 
 function parseGame(row: GameRow): GameState {
   return {
@@ -48,6 +74,7 @@ function parseGame(row: GameRow): GameState {
     attackClaim: row.attackClaim ? JSON.parse(row.attackClaim) : null,
     blockClaim: row.blockClaim ? JSON.parse(row.blockClaim) : null,
     passedLast: row.passedLast as Player | null,
+    boutEndAcks: JSON.parse(row.boutEndAcks),
   }
 }
 
@@ -72,6 +99,7 @@ function setGameFields(state: GameState) {
     attackClaim: state.attackClaim ? JSON.stringify(state.attackClaim) : null,
     blockClaim: state.blockClaim ? JSON.stringify(state.blockClaim) : null,
     passedLast: state.passedLast || null,
+    boutEndAcks: JSON.stringify(state.boutEndAcks),
   }
 }
 
@@ -181,9 +209,12 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
           const boutWinner: Player = attackerWins
             ? (state.attackClaim!.player as Player)
             : (opponent(state.attackClaim!.player) as Player)
-          const afterEnd = endBout(resolved, boutWinner)
-          await saveGame(afterEnd)
-          broadcast(afterEnd)
+          const afterFinish = finishBout(resolved, boutWinner)
+          await saveGame(afterFinish)
+          broadcast(afterFinish)
+          if (afterFinish.turnPhase === 'bout_end') {
+            scheduleBoutAutoAdvance(gameId)
+          }
         } else {
           const supplied = resupply(resolved)
           await saveGame(supplied)
@@ -199,12 +230,32 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
         }
         if (result.doublePass) {
           const boutWinner = determineBoutWinnerOnPass(result.state)
-          const afterEnd = endBout(result.state, boutWinner)
-          await saveGame(afterEnd)
-          broadcast(afterEnd)
+          const afterFinish = finishBout(result.state, boutWinner)
+          await saveGame(afterFinish)
+          broadcast(afterFinish)
+          if (afterFinish.turnPhase === 'bout_end') {
+            scheduleBoutAutoAdvance(gameId)
+          }
         } else {
           await saveGame(result.state)
           broadcast(result.state)
+        }
+        break
+      }
+      case 'boutAck': {
+        const ackResult = ackBoutEnd(state, player)
+        if (ackResult.error) {
+          send(ws, { type: 'error', message: ackResult.error })
+          return
+        }
+        if (ackResult.bothAcked) {
+          clearBoutTimer(gameId)
+          const next = startNextBout(ackResult.state)
+          await saveGame(next)
+          broadcast(next)
+        } else {
+          await saveGame(ackResult.state)
+          broadcast(ackResult.state)
         }
         break
       }

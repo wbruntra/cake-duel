@@ -1,5 +1,6 @@
 import { useGame } from '@/context/GameContext'
 import Card from './Card'
+import BoutEndScreen from './BoutEndScreen'
 import { getCardInfo } from '@/utils/cards'
 import { motion } from 'motion/react'
 
@@ -14,6 +15,10 @@ const PHASE_STYLES = {
 export default function PlayArea() {
   const { state } = useGame()
   if (!state) return null
+
+  if (state.turnPhase === 'bout_end') {
+    return <BoutEndScreen />
+  }
 
   if (state.turnPhase === 'game_over') {
     return (

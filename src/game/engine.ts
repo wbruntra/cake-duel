@@ -170,16 +170,6 @@ export function pass(
   }
 }
 
-export function checkDoublePass(state: GameState): boolean {
-  return false
-}
-
-export function determineBoutWinnerOnPass(state: GameState): Player {
-  if (state.p1Cakes > state.p2Cakes) return 'p1'
-  if (state.p2Cakes > state.p1Cakes) return 'p1'
-  return state.turnPlayer === 'p1' ? 'p2' : 'p1'
-}
-
 export function resolveTurn(state: GameState): {
   state: GameState
   boutOver: boolean
@@ -249,7 +239,7 @@ export function resupply(state: GameState): GameState {
   }
 }
 
-export function endBout(state: GameState, boutWinner: Player): GameState {
+export function finishBout(state: GameState, boutWinner: Player): GameState {
   const boutIndex = state.currentBout - 1
   const newWinners = [...state.boutWinners]
   newWinners[boutIndex] = boutWinner
@@ -257,34 +247,58 @@ export function endBout(state: GameState, boutWinner: Player): GameState {
   const p1Wins = newWinners.filter((w) => w === 'p1').length
   const p2Wins = newWinners.filter((w) => w === 'p2').length
 
-  if (p1Wins >= 3) {
+  if (p1Wins >= 3 || p2Wins >= 3) {
     return {
       ...state,
       boutWinners: newWinners,
-      winner: 'p1',
-      status: 'finished',
-      turnPhase: 'game_over',
-    }
-  }
-  if (p2Wins >= 3) {
-    return {
-      ...state,
-      boutWinners: newWinners,
-      winner: 'p2',
+      winner: p1Wins >= 3 ? 'p1' : 'p2',
       status: 'finished',
       turnPhase: 'game_over',
     }
   }
 
-  const nextBoutState: GameState = {
+  return {
     ...state,
     boutWinners: newWinners,
-    currentBout: state.currentBout + 1,
-    status: 'playing',
+    turnPhase: 'bout_end',
+    boutEndAcks: [],
   }
+}
 
-  const loser = opponent(boutWinner)
-  return newBout(nextBoutState, loser)
+export function startNextBout(state: GameState): GameState {
+  const lastWinner = state.boutWinners[state.currentBout - 1] as Player
+  const loser = opponent(lastWinner)
+  return newBout(
+    {
+      ...state,
+      currentBout: state.currentBout + 1,
+      boutEndAcks: [],
+    },
+    loser,
+  )
+}
+
+export function ackBoutEnd(
+  state: GameState,
+  player: Player,
+): { state: GameState; bothAcked: boolean; error?: string } {
+  if (state.turnPhase !== 'bout_end') {
+    return { state, bothAcked: false, error: 'Not in bout_end phase' }
+  }
+  const acks = state.boutEndAcks.includes(player)
+    ? state.boutEndAcks
+    : [...state.boutEndAcks, player]
+  return {
+    state: { ...state, boutEndAcks: acks },
+    bothAcked: acks.length === 2,
+  }
+}
+
+// Kept for backward compatibility with tests
+export function endBout(state: GameState, boutWinner: Player): GameState {
+  const afterFinish = finishBout(state, boutWinner)
+  if (afterFinish.status === 'finished') return afterFinish
+  return startNextBout(afterFinish)
 }
 
 export function checkDoublePass(state: GameState): boolean {
@@ -318,6 +332,7 @@ export function stateForPlayer(state: GameState, player: Player) {
     deckCount: state.deck.length,
     attackClaim: state.attackClaim,
     blockClaim: state.blockClaim,
+    boutEndAcks: state.boutEndAcks,
     player,
   }
 }
