@@ -1,7 +1,7 @@
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { Database } from "bun:sqlite";
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { Database } from 'bun:sqlite'
 
-const sqlite = new Database("cake-duel.db");
-sqlite.exec("PRAGMA journal_mode=WAL");
+const sqlite = new Database('cake-duel.db')
+sqlite.exec('PRAGMA journal_mode=WAL')
 
-export const db = drizzle(sqlite);
+export const db = drizzle(sqlite)

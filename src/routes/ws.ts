@@ -1,31 +1,42 @@
-import type { ServerWebSocket } from "bun";
-import { db } from "../db";
-import { games } from "../db/schema";
-import { eq } from "drizzle-orm";
-import { playAttack, playBlock, pass, resolveTurn, resupply, stateForPlayer } from "../game/engine";
-import type { GameState, Player } from "../game/types";
+import type { ServerWebSocket } from 'bun'
+import { db } from '../db'
+import { games } from '../db/schema'
+import { eq } from 'drizzle-orm'
+import {
+  playAttack,
+  playBlock,
+  skipBlock,
+  pass,
+  resolveTurn,
+  resupply,
+  stateForPlayer,
+  endBout,
+  determineBoutWinnerOnPass,
+} from '../game/engine'
+import type { GameState, Player } from '../game/types'
+import { opponent } from '../game/types'
 
-type GameRow = typeof games.$inferSelect;
-type PlayerLabel = "p1" | "p2";
+type GameRow = typeof games.$inferSelect
+type PlayerLabel = 'p1' | 'p2'
 
 export type WsData = {
-  gameId: string | null;
-  player: PlayerLabel | null;
-};
+  gameId: string | null
+  player: PlayerLabel | null
+}
 
-const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>();
+const connections = new Map<string, Map<PlayerLabel, ServerWebSocket<WsData>>>()
 
 function parseGame(row: GameRow): GameState {
   return {
     id: row.id,
-    status: row.status as GameState["status"],
+    status: row.status as GameState['status'],
     player1Id: row.player1Id,
     player2Id: row.player2Id,
     currentBout: row.currentBout,
     boutWinners: [row.bout1Winner, row.bout2Winner, row.bout3Winner],
     winner: row.winner,
     turnPlayer: row.turnPlayer as Player | null,
-    turnPhase: row.turnPhase as GameState["turnPhase"],
+    turnPhase: row.turnPhase as GameState['turnPhase'],
     p1Hand: JSON.parse(row.p1Hand),
     p2Hand: JSON.parse(row.p2Hand),
     p1Cakes: row.p1Cakes,
@@ -37,7 +48,7 @@ function parseGame(row: GameRow): GameState {
     attackClaim: row.attackClaim ? JSON.parse(row.attackClaim) : null,
     blockClaim: row.blockClaim ? JSON.parse(row.blockClaim) : null,
     passedLast: row.passedLast as Player | null,
-  };
+  }
 }
 
 function setGameFields(state: GameState) {
@@ -61,127 +72,157 @@ function setGameFields(state: GameState) {
     attackClaim: state.attackClaim ? JSON.stringify(state.attackClaim) : null,
     blockClaim: state.blockClaim ? JSON.stringify(state.blockClaim) : null,
     passedLast: state.passedLast || null,
-  };
+  }
 }
 
 async function loadGame(id: string): Promise<GameState | null> {
-  const rows = await db.select().from(games).where(eq(games.id, id));
-  if (rows.length === 0) return null;
-  return parseGame(rows[0]!);
+  const rows = await db.select().from(games).where(eq(games.id, id))
+  if (rows.length === 0) return null
+  return parseGame(rows[0]!)
 }
 
 async function saveGame(state: GameState) {
-  await db.update(games).set(setGameFields(state)).where(eq(games.id, state.id));
+  await db.update(games).set(setGameFields(state)).where(eq(games.id, state.id))
 }
 
 function broadcast(state: GameState) {
-  const gameConns = connections.get(state.id);
-  if (!gameConns) return;
+  const gameConns = connections.get(state.id)
+  if (!gameConns) return
   for (const [player, ws] of gameConns) {
-    ws.send(JSON.stringify({ type: "state", state: stateForPlayer(state, player) }));
+    ws.send(JSON.stringify({ type: 'state', state: stateForPlayer(state, player) }))
   }
 }
 
 function send(ws: ServerWebSocket<WsData>, msg: object) {
-  ws.send(JSON.stringify(msg));
+  ws.send(JSON.stringify(msg))
 }
 
 export function wsOpen(ws: ServerWebSocket<WsData>) {
-  send(ws, { type: "connected" });
+  send(ws, { type: 'connected' })
 }
 
 export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string | Buffer) {
   try {
-    const msg = JSON.parse(typeof rawMessage === "string" ? rawMessage : rawMessage.toString());
+    const msg = JSON.parse(typeof rawMessage === 'string' ? rawMessage : rawMessage.toString())
 
-    if (msg.type === "join") {
-      const state = await loadGame(msg.gameId);
+    if (msg.type === 'join') {
+      const state = await loadGame(msg.gameId)
       if (!state) {
-        send(ws, { type: "error", message: "Game not found" });
-        return;
+        send(ws, { type: 'error', message: 'Game not found' })
+        return
       }
 
-      let player: PlayerLabel;
+      let player: PlayerLabel
       if (msg.playerId === state.player1Id) {
-        player = "p1";
+        player = 'p1'
       } else if (msg.playerId === state.player2Id) {
-        player = "p2";
+        player = 'p2'
       } else {
-        send(ws, { type: "error", message: "Not a player in this game" });
-        return;
+        send(ws, { type: 'error', message: 'Not a player in this game' })
+        return
       }
 
-      ws.data.gameId = msg.gameId;
-      ws.data.player = player;
+      ws.data.gameId = msg.gameId
+      ws.data.player = player
 
-      if (!connections.has(msg.gameId)) connections.set(msg.gameId, new Map());
-      connections.get(msg.gameId)!.set(player, ws);
+      if (!connections.has(msg.gameId)) connections.set(msg.gameId, new Map())
+      connections.get(msg.gameId)!.set(player, ws)
 
-      send(ws, { type: "state", state: stateForPlayer(state, player) });
-      return;
+      send(ws, { type: 'state', state: stateForPlayer(state, player) })
+      return
     }
 
-    const { gameId, player } = ws.data;
+    const { gameId, player } = ws.data
     if (!gameId || !player) {
-      send(ws, { type: "error", message: "Not joined" });
-      return;
+      send(ws, { type: 'error', message: 'Not joined' })
+      return
     }
 
-    const state = await loadGame(gameId);
+    const state = await loadGame(gameId)
     if (!state) {
-      send(ws, { type: "error", message: "Game not found" });
-      return;
+      send(ws, { type: 'error', message: 'Game not found' })
+      return
     }
 
     switch (msg.type) {
-      case "attack": {
-        const result = playAttack(state, player, msg.cardIds, msg.claimedName);
-        if (result.error) { send(ws, { type: "error", message: result.error }); return; }
-        await saveGame(result.state);
-        broadcast(result.state);
-        break;
-      }
-      case "block": {
-        const result = playBlock(state, player, msg.cardIds, msg.claimedName);
-        if (result.error) { send(ws, { type: "error", message: result.error }); return; }
-        await saveGame(result.state);
-        broadcast(result.state);
-        break;
-      }
-      case "resolve": {
-        const { state: resolved, boutOver } = resolveTurn(state);
-        if (boutOver) {
-          await saveGame(resolved);
-          broadcast(resolved);
-        } else {
-          const supplied = resupply(resolved);
-          await saveGame(supplied);
-          broadcast(supplied);
+      case 'attack': {
+        const result = playAttack(state, player, msg.cardIds, msg.claimedName)
+        if (result.error) {
+          send(ws, { type: 'error', message: result.error })
+          return
         }
-        break;
+        await saveGame(result.state)
+        broadcast(result.state)
+        break
       }
-      case "pass": {
-        const result = pass(state, player);
-        if (result.error) { send(ws, { type: "error", message: result.error }); return; }
-        await saveGame(result.state);
-        broadcast(result.state);
-        break;
+      case 'block': {
+        const result = playBlock(state, player, msg.cardIds)
+        if (result.error) {
+          send(ws, { type: 'error', message: result.error })
+          return
+        }
+        await saveGame(result.state)
+        broadcast(result.state)
+        break
+      }
+      case 'skipBlock': {
+        const result = skipBlock(state, player)
+        if (result.error) {
+          send(ws, { type: 'error', message: result.error })
+          return
+        }
+        await saveGame(result.state)
+        broadcast(result.state)
+        break
+      }
+      case 'resolve': {
+        const { state: resolved, boutOver, attackerWins } = resolveTurn(state)
+        if (boutOver) {
+          const boutWinner: Player = attackerWins
+            ? (state.attackClaim!.player as Player)
+            : (opponent(state.attackClaim!.player) as Player)
+          const afterEnd = endBout(resolved, boutWinner)
+          await saveGame(afterEnd)
+          broadcast(afterEnd)
+        } else {
+          const supplied = resupply(resolved)
+          await saveGame(supplied)
+          broadcast(supplied)
+        }
+        break
+      }
+      case 'pass': {
+        const result = pass(state, player)
+        if (result.error) {
+          send(ws, { type: 'error', message: result.error })
+          return
+        }
+        if (result.doublePass) {
+          const boutWinner = determineBoutWinnerOnPass(result.state)
+          const afterEnd = endBout(result.state, boutWinner)
+          await saveGame(afterEnd)
+          broadcast(afterEnd)
+        } else {
+          await saveGame(result.state)
+          broadcast(result.state)
+        }
+        break
       }
       default:
-        send(ws, { type: "error", message: `Unknown action: ${msg.type}` });
+        send(ws, { type: 'error', message: `Unknown action: ${msg.type}` })
     }
   } catch (e: any) {
-    send(ws, { type: "error", message: e.message });
+    send(ws, { type: 'error', message: e.message })
   }
 }
 
 export function wsClose(ws: ServerWebSocket<WsData>) {
-  const { gameId, player } = ws.data;
+  const { gameId, player } = ws.data
   if (gameId && player) {
-    const gameConns = connections.get(gameId);
+    const gameConns = connections.get(gameId)
     if (gameConns) {
-      gameConns.delete(player);
-      if (gameConns.size === 0) connections.delete(gameId);
+      gameConns.delete(player)
+      if (gameConns.size === 0) connections.delete(gameId)
     }
   }
 }

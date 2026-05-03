@@ -1,13 +1,13 @@
-import { getCardInfo } from "@/utils/cards";
+import { getCardInfo } from '@/utils/cards'
 
 export default function Card({ cardId, selected, onClick, faceDown, small }) {
-  const info = getCardInfo(cardId);
+  const info = getCardInfo(cardId)
   return (
     <button
-      className={`card ${selected ? "selected" : ""} ${faceDown ? "facedown" : ""} ${small ? "small" : ""}`}
+      className={`card ${selected ? 'selected' : ''} ${faceDown ? 'facedown' : ''} ${small ? 'small' : ''}`}
       onClick={onClick}
       disabled={!onClick}
-      title={faceDown ? "?" : info.name}
+      title={faceDown ? '?' : info.name}
     >
       {faceDown ? (
         <span className="card-back">🃏</span>
@@ -21,5 +21,5 @@ export default function Card({ cardId, selected, onClick, faceDown, small }) {
         </>
       )}
     </button>
-  );
+  )
 }

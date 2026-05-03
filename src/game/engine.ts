@@ -1,43 +1,43 @@
-import type { GameState, Player, Claim } from "./types";
-import { opponent, getCakes, getHand } from "./types";
-import { getCardByName, createDeck, canBlock, getAttackerTypes } from "./cards";
+import type { GameState, Player, Claim } from './types'
+import { opponent, getCakes, getHand } from './types'
+import { getCardByName, createDeck, getAttackerTypes } from './cards'
 
 function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
+  const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j]!, a[i]!];
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j]!, a[i]!]
   }
-  return a;
+  return a
 }
 
 function drawCards(deck: string[], count: number): { drawn: string[]; deck: string[] } {
-  const remaining = [...deck];
-  const drawn = [];
+  const remaining = [...deck]
+  const drawn = []
   for (let i = 0; i < count && remaining.length > 0; i++) {
-    drawn.push(remaining.shift()!);
+    drawn.push(remaining.shift()!)
   }
-  return { drawn, deck: remaining };
+  return { drawn, deck: remaining }
 }
 
 function removeFromHand(hand: string[], cardIds: string[]): string[] | null {
-  const remaining = [...hand];
+  const remaining = [...hand]
   for (const id of cardIds) {
-    const idx = remaining.indexOf(id);
-    if (idx === -1) return null;
-    remaining.splice(idx, 1);
+    const idx = remaining.indexOf(id)
+    if (idx === -1) return null
+    remaining.splice(idx, 1)
   }
-  return remaining;
+  return remaining
 }
 
 export function newBout(state: GameState, startingPlayer: Player): GameState {
-  const deck = shuffle(createDeck());
-  const { drawn: p1, deck: d1 } = drawCards(deck, state.p1HandSize);
-  const { drawn: p2, deck: d2 } = drawCards(d1, state.p2HandSize);
+  const deck = shuffle(createDeck())
+  const { drawn: p1, deck: d1 } = drawCards(deck, state.p1HandSize)
+  const { drawn: p2, deck: d2 } = drawCards(d1, state.p2HandSize)
 
   return {
     ...state,
-    status: "playing",
+    status: 'playing',
     p1Hand: p1,
     p2Hand: p2,
     p1Cakes: 3,
@@ -48,85 +48,115 @@ export function newBout(state: GameState, startingPlayer: Player): GameState {
     blockClaim: null,
     passedLast: null,
     turnPlayer: startingPlayer,
-    turnPhase: "attack",
-  };
+    turnPhase: 'attack',
+  }
 }
 
 export function playAttack(
   state: GameState,
   player: Player,
   cardIds: string[],
-  claimedName: string
+  claimedName: string,
 ): { state: GameState; error?: string } {
-  if (state.turnPlayer !== player) return { state, error: "Not your turn" };
-  if (state.turnPhase !== "attack") return { state, error: "Not in attack phase" };
-  if (cardIds.length === 0) return { state, error: "Must play at least one card" };
+  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
+  if (state.turnPhase !== 'attack') return { state, error: 'Not in attack phase' }
+  if (cardIds.length === 0) return { state, error: 'Must play at least one card' }
 
-  const hand = getHand(state, player);
-  const newHand = removeFromHand(hand, cardIds);
-  if (!newHand) return { state, error: "Cards not in hand" };
+  const hand = getHand(state, player)
+  const newHand = removeFromHand(hand, cardIds)
+  if (!newHand) return { state, error: 'Cards not in hand' }
 
-  const card = getCardByName(claimedName);
-  if (!card) return { state, error: `Unknown card: ${claimedName}` };
-  if (card.isUnclaimable) return { state, error: `${claimedName} cannot be claimed` };
-  if (!getAttackerTypes().includes(card.type)) return { state, error: `${claimedName} is not an attacker` };
+  const card = getCardByName(claimedName)
+  if (!card) return { state, error: `Unknown card: ${claimedName}` }
+  if (card.isUnclaimable) return { state, error: `${claimedName} cannot be claimed` }
+  if (!getAttackerTypes().includes(card.type))
+    return { state, error: `${claimedName} is not an attacker` }
 
-  const claim: Claim = { cardName: claimedName, count: cardIds.length, player, playedCardIds: cardIds };
+  const claim: Claim = {
+    cardName: claimedName,
+    count: cardIds.length,
+    player,
+    playedCardIds: cardIds,
+  }
 
   return {
     state: {
       ...state,
-      [player === "p1" ? "p1Hand" : "p2Hand"]: newHand,
+      [player === 'p1' ? 'p1Hand' : 'p2Hand']: newHand,
       discard: [...state.discard, ...cardIds],
       attackClaim: claim,
       passedLast: null,
-      turnPhase: "block",
+      turnPhase: 'block',
       turnPlayer: opponent(player),
     },
-  };
+  }
+}
+
+function getBlockerForAttack(attackTypeName: string): string | null {
+  if (attackTypeName === 'weapon') return 'Defender'
+  if (attackTypeName === 'magic') return 'Scientist'
+  return null
 }
 
 export function playBlock(
   state: GameState,
   player: Player,
   cardIds: string[],
-  claimedName: string
 ): { state: GameState; error?: string } {
-  if (state.turnPlayer !== player) return { state, error: "Not your turn" };
-  if (state.turnPhase !== "block") return { state, error: "Not in block phase" };
-  if (!state.attackClaim) return { state, error: "Nothing to block" };
-  if (cardIds.length === 0) return { state, error: "Must play at least one card" };
+  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
+  if (state.turnPhase !== 'block') return { state, error: 'Not in block phase' }
+  if (!state.attackClaim) return { state, error: 'Nothing to block' }
+  if (cardIds.length === 0) return { state, error: 'Must play at least one card' }
 
-  const hand = getHand(state, player);
-  const newHand = removeFromHand(hand, cardIds);
-  if (!newHand) return { state, error: "Cards not in hand" };
+  const attackCard = getCardByName(state.attackClaim.cardName)
+  if (!attackCard) return { state, error: 'Invalid attack claim' }
 
-  const card = getCardByName(claimedName);
-  if (!card) return { state, error: `Unknown card: ${claimedName}` };
-  if (card.isUnclaimable) return { state, error: `${claimedName} cannot be claimed` };
-  if (card.type !== "blocker") return { state, error: `${claimedName} is not a blocker` };
+  const claimedName = getBlockerForAttack(attackCard.type)
+  if (!claimedName) return { state, error: 'Cannot block this attack type' }
 
-  const attackCard = getCardByName(state.attackClaim.cardName);
-  if (!canBlock(claimedName, attackCard!.type)) {
-    return { state, error: `${claimedName} cannot block ${state.attackClaim.cardName}` };
+  const hand = getHand(state, player)
+  const newHand = removeFromHand(hand, cardIds)
+  if (!newHand) return { state, error: 'Cards not in hand' }
+
+  const blockCard = getCardByName(claimedName)
+  const claim: Claim = {
+    cardName: claimedName,
+    count: cardIds.length,
+    player,
+    playedCardIds: cardIds,
   }
-
-  const claim: Claim = { cardName: claimedName, count: cardIds.length, player, playedCardIds: cardIds };
 
   return {
     state: {
       ...state,
-      [player === "p1" ? "p1Hand" : "p2Hand"]: newHand,
+      [player === 'p1' ? 'p1Hand' : 'p2Hand']: newHand,
       discard: [...state.discard, ...cardIds],
       blockClaim: claim,
-      turnPhase: "resolve",
+      turnPhase: 'resolve',
     },
-  };
+  }
 }
 
-export function pass(state: GameState, player: Player): { state: GameState; error?: string } {
-  if (state.turnPlayer !== player) return { state, error: "Not your turn" };
-  if (state.turnPhase !== "attack") return { state, error: "Not in attack phase" };
+export function skipBlock(state: GameState, player: Player): { state: GameState; error?: string } {
+  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
+  if (state.turnPhase !== 'block') return { state, error: 'Not in block phase' }
+
+  return {
+    state: {
+      ...state,
+      turnPhase: 'resolve',
+    },
+  }
+}
+
+export function pass(
+  state: GameState,
+  player: Player,
+): { state: GameState; error?: string; doublePass?: boolean } {
+  if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
+  if (state.turnPhase !== 'attack') return { state, error: 'Not in attack phase' }
+
+  const doublePass = state.passedLast === opponent(player)
 
   return {
     state: {
@@ -134,77 +164,144 @@ export function pass(state: GameState, player: Player): { state: GameState; erro
       passedLast: player,
       attackClaim: null,
       turnPlayer: opponent(player),
-      turnPhase: "attack",
+      turnPhase: 'attack',
     },
-  };
+    doublePass,
+  }
 }
 
-export function resolveTurn(state: GameState): { state: GameState; boutOver: boolean; attackerWins: boolean } {
+export function checkDoublePass(state: GameState): boolean {
+  return false
+}
+
+export function determineBoutWinnerOnPass(state: GameState): Player {
+  if (state.p1Cakes > state.p2Cakes) return 'p1'
+  if (state.p2Cakes > state.p1Cakes) return 'p1'
+  return state.turnPlayer === 'p1' ? 'p2' : 'p1'
+}
+
+export function resolveTurn(state: GameState): {
+  state: GameState
+  boutOver: boolean
+  attackerWins: boolean
+} {
   if (!state.attackClaim) {
-    return { state, boutOver: false, attackerWins: false };
+    return { state, boutOver: false, attackerWins: false }
   }
 
-  const attackCard = getCardByName(state.attackClaim.cardName)!;
-  let attackersRemaining = state.attackClaim.count;
+  const attackCard = getCardByName(state.attackClaim.cardName)!
+  let attackersRemaining = state.attackClaim.count
 
   if (state.blockClaim) {
-    const blockCard = getCardByName(state.blockClaim.cardName)!;
-    const totalBlocks = blockCard.blocks * state.blockClaim.count;
-    attackersRemaining = Math.max(0, state.attackClaim.count - totalBlocks);
+    const blockCard = getCardByName(state.blockClaim.cardName)!
+    const totalBlocks = blockCard.blocks * state.blockClaim.count
+    attackersRemaining = Math.max(0, state.attackClaim.count - totalBlocks)
   }
 
-  const stolen = attackersRemaining * attackCard.cakesStolen;
+  const stolen = attackersRemaining * attackCard.cakesStolen
 
-  const attacker = state.attackClaim.player;
-  const defender = opponent(attacker);
-  const defenderCakes = getCakes(state, defender);
-  const actuallyStolen = Math.min(stolen, defenderCakes);
+  const attacker = state.attackClaim.player
+  const defender = opponent(attacker)
+  const defenderCakes = getCakes(state, defender)
+  const actuallyStolen = Math.min(stolen, defenderCakes)
 
   const next: GameState = {
     ...state,
-    [attacker === "p1" ? "p1Cakes" : "p2Cakes"]: getCakes(state, attacker) + actuallyStolen,
-    [defender === "p1" ? "p1Cakes" : "p2Cakes"]: defenderCakes - actuallyStolen,
-  };
-
-  if (getCakes(next, defender) <= 0) {
-    return { state: next, boutOver: true, attackerWins: true };
+    [attacker === 'p1' ? 'p1Cakes' : 'p2Cakes']: getCakes(state, attacker) + actuallyStolen,
+    [defender === 'p1' ? 'p1Cakes' : 'p2Cakes']: defenderCakes - actuallyStolen,
   }
 
-  return { state: next, boutOver: false, attackerWins: false };
+  if (getCakes(next, defender) <= 0) {
+    return { state: next, boutOver: true, attackerWins: true }
+  }
+
+  return { state: next, boutOver: false, attackerWins: false }
 }
 
 export function resupply(state: GameState): GameState {
-  let { deck } = state;
-  if (!state.attackClaim) return { ...state, turnPhase: "attack", turnPlayer: opponent(state.turnPlayer!) };
+  let { deck } = state
+  if (!state.attackClaim)
+    return { ...state, turnPhase: 'attack', turnPlayer: opponent(state.turnPlayer!) }
 
-  const attacker = state.attackClaim.player;
-  const defender = opponent(attacker);
+  const attacker = state.attackClaim.player
+  const defender = opponent(attacker)
 
-  const attHand = [...getHand(state, attacker)];
-  const defHand = [...getHand(state, defender)];
-  const attSize = state[attacker === "p1" ? "p1HandSize" : "p2HandSize"];
-  const defSize = state[defender === "p1" ? "p1HandSize" : "p2HandSize"];
+  const attHand = [...getHand(state, attacker)]
+  const defHand = [...getHand(state, defender)]
+  const attSize = state[attacker === 'p1' ? 'p1HandSize' : 'p2HandSize']
+  const defSize = state[defender === 'p1' ? 'p1HandSize' : 'p2HandSize']
 
-  const { drawn: aDraw, deck: d1 } = drawCards(deck, Math.max(0, attSize - attHand.length));
-  attHand.push(...aDraw);
+  const { drawn: aDraw, deck: d1 } = drawCards(deck, Math.max(0, attSize - attHand.length))
+  attHand.push(...aDraw)
 
-  const { drawn: dDraw, deck: d2 } = drawCards(d1, Math.max(0, defSize - defHand.length));
-  defHand.push(...dDraw);
+  const { drawn: dDraw, deck: d2 } = drawCards(d1, Math.max(0, defSize - defHand.length))
+  defHand.push(...dDraw)
 
   return {
     ...state,
     deck: d2,
-    [attacker === "p1" ? "p1Hand" : "p2Hand"]: attHand,
-    [defender === "p1" ? "p1Hand" : "p2Hand"]: defHand,
-    turnPhase: "attack",
+    [attacker === 'p1' ? 'p1Hand' : 'p2Hand']: attHand,
+    [defender === 'p1' ? 'p1Hand' : 'p2Hand']: defHand,
+    turnPhase: 'attack',
     turnPlayer: opponent(attacker),
     attackClaim: null,
     blockClaim: null,
-  };
+  }
+}
+
+export function endBout(state: GameState, boutWinner: Player): GameState {
+  const boutIndex = state.currentBout - 1
+  const newWinners = [...state.boutWinners]
+  newWinners[boutIndex] = boutWinner
+
+  const p1Wins = newWinners.filter((w) => w === 'p1').length
+  const p2Wins = newWinners.filter((w) => w === 'p2').length
+
+  if (p1Wins >= 3) {
+    return {
+      ...state,
+      boutWinners: newWinners,
+      winner: 'p1',
+      status: 'finished',
+      turnPhase: 'game_over',
+    }
+  }
+  if (p2Wins >= 3) {
+    return {
+      ...state,
+      boutWinners: newWinners,
+      winner: 'p2',
+      status: 'finished',
+      turnPhase: 'game_over',
+    }
+  }
+
+  const nextBoutState: GameState = {
+    ...state,
+    boutWinners: newWinners,
+    currentBout: state.currentBout + 1,
+    status: 'playing',
+  }
+
+  const loser = opponent(boutWinner)
+  return newBout(nextBoutState, loser)
+}
+
+export function checkDoublePass(state: GameState): boolean {
+  if (state.passedLast && !state.attackClaim) {
+    return true
+  }
+  return false
+}
+
+export function determineBoutWinnerOnPass(state: GameState): Player {
+  if (state.p1Cakes > state.p2Cakes) return 'p1'
+  if (state.p2Cakes > state.p1Cakes) return 'p2'
+  return state.turnPlayer === 'p1' ? 'p2' : 'p1'
 }
 
 export function stateForPlayer(state: GameState, player: Player) {
-  const opp = opponent(player);
+  const opp = opponent(player)
   return {
     id: state.id,
     status: state.status,
@@ -213,14 +310,14 @@ export function stateForPlayer(state: GameState, player: Player) {
     winner: state.winner,
     turnPlayer: state.turnPlayer,
     turnPhase: state.turnPhase,
-    hand: state[player === "p1" ? "p1Hand" : "p2Hand"],
-    opponentHandCount: state[opp === "p1" ? "p1Hand" : "p2Hand"].length,
-    myCakes: state[player === "p1" ? "p1Cakes" : "p2Cakes"],
-    opponentCakes: state[opp === "p1" ? "p1Cakes" : "p2Cakes"],
-    myHandSize: state[player === "p1" ? "p1HandSize" : "p2HandSize"],
+    hand: state[player === 'p1' ? 'p1Hand' : 'p2Hand'],
+    opponentHandCount: state[opp === 'p1' ? 'p1Hand' : 'p2Hand'].length,
+    myCakes: state[player === 'p1' ? 'p1Cakes' : 'p2Cakes'],
+    opponentCakes: state[opp === 'p1' ? 'p1Cakes' : 'p2Cakes'],
+    myHandSize: state[player === 'p1' ? 'p1HandSize' : 'p2HandSize'],
     deckCount: state.deck.length,
     attackClaim: state.attackClaim,
     blockClaim: state.blockClaim,
     player,
-  };
+  }
 }

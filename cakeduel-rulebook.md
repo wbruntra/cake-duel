@@ -1,4 +1,5 @@
 # CAKE DUEL
+
 ## Rules
 
 ### So You Wanna Be King of Cakes?
@@ -11,6 +12,7 @@ These are hard times: cake is scarce, but Sheepie are plenty. To fairly distribu
 ---
 
 ### Components
+
 - 1 Rule Booklet
 - 35 Cards
   - 20 Core Cards
@@ -34,6 +36,7 @@ To jump right into the game, watch our quick two-minute overview at: http://cake
 4. **Flavor Text** — This Sheepie troop has a deep soul.
 
 **Types of Sheepie**
+
 - **Weapon Attacker:** Deals physical damage. Blocked by Defender.
 - **Magic Attacker:** Deals magic damage. Blocked by Scientist.
 - **Special Attacker:** Produces exotic special effects. Hard to block.
@@ -50,6 +53,7 @@ To jump right into the game, watch our quick two-minute overview at: http://cake
 > **!** Set aside the pink special cards for now. Do not put them in the deck (pg. 16).
 
 **Core Deck** (x20)
+
 - 5 Soldiers
 - 4 Archers
 - 4 Defenders
@@ -58,6 +62,7 @@ To jump right into the game, watch our quick two-minute overview at: http://cake
 - 1 Sir Wolfy
 
 **Tokens**
+
 - 7 Cake Tokens
 - 5 Victory Tokens
 
@@ -94,6 +99,7 @@ A bout consists of many turns. Refer to this chart for the order of actions for 
 **Turn Ends.** It is now the other player's turn to attack.
 
 **End the bout** if one of these three conditions are met any time during a turn:
+
 - Either Player Has No Cakes
 - Either Player Challenges
 - Both Players Pass
@@ -107,12 +113,14 @@ In Cake Duel, all cards are played facedown. To make a play, put one or more car
 - Claiming is announcing the quantity and the name of the cards played. The claimed name can be a bluff.
 
 **There are 2 restrictions on claims**
+
 - Do not lie about the quantity of cards played.
 - Do not claim multiple troop names at once.
 
 > **!** Do not flip claimed cards faceup at the end of a turn.
 
 **Sample Claims**
+
 - Two cards played facedown as "two Wizards" (Valid)
 - One card played as "two Wizards" (Invalid. Claim unequal to # of played cards)
 - One card played facedown as "Sir Wolfy" (Invalid. Cannot claim unclaimables)
@@ -132,10 +140,12 @@ The attacking player may also pass. If both players pass their turns in successi
 
 **Blocking Claim**
 The blocking player must claim **Blocker** troops.
+
 - The blocking player can only claim troops that are able to block the attack (e.g. Scientist is an invalid claim against Archer).
 - Any quantity of troops may be claimed. If insufficient blockers are claimed, the unblocked attackers still resolve (i.e. they steal cake).
 
 **Sample Turn**
+
 - Alice plays 2 cards facedown and claims "Two Wizards."
 - Bob plays 1 card facedown and claims "One Scientist."
 - Alice accepts and takes 2 cakes (the effect of the unblocked Wizard).
@@ -155,6 +165,7 @@ Once cards are flipped, the bout ends!
 A challenge can only happen immediately after the play is made. Drawing cards, making a play, or taking cakes forfeits the opportunity to challenge.
 
 **Example**
+
 - Alice plays 2 cards facedown and claims "two Soldiers."
 - Bob plays 2 cards facedown and claims "two Defenders."
 - Alice challenges the play by flipping Bob's cards over.
@@ -173,11 +184,13 @@ Transfer any successfully stolen cakes. Remember to use the claimed effects, not
 The attacker redraws back up to hand size. Then, the blocker redraws back up to hand size. Unless modified, the hand size is 4 cards.
 
 **If the deck runs out during redraw**
+
 - Players continue dueling with the remaining cards in their hands.
 - If a player has no cards during their turn, it is an automatic pass.
 - Players with no cards may still challenge claims.
 
 **Example**
+
 - 2 cards remain. Alice claims 2 Archers and Bob blocks with 1 Defender.
 - Alice takes 1 cake and draws out the last two cards in the deck.
 - Bob cannot resupply and must start his turn with only 3 cards in hand.
@@ -219,6 +232,7 @@ Block one **Magic** from stealing cake(s).
 At the end of the turn, reveal face-up and taunt your opponent.
 
 **Note**
+
 - Sir Wolfy is not a valid claim. You must bluff him as another card.
 - Taunting has no gameplay effect and is optional in tournament-style play.
 
@@ -249,6 +263,7 @@ Between bouts, do not reveal which specials are in the deck while reshuffling. D
 New **Weapon** and **Magic** have extra effects. Defender and Scientist will only block cake theft, but not the extra effects. During resolution, resolve all **Blockers** before resolving the effects of the attackers.
 
 **Example**
+
 - Alice plays 1 card facedown and claims "one Scout"
 - Bob plays 1 card facedown and claims "one Defender"
 - Alice takes no cakes, but she still takes another turn.
@@ -265,51 +280,61 @@ New **Unclaimables** change identities on challenge, allowing them to become val
 
 **Assassin**
 Steal 5 cakes.
+
 - Assassin is blocked by 1 defender.
 
 **Scout**
 Steal 1 cake. Take another turn.
+
 - Unless stated, the attacker still gets another turn if Scout is blocked.
 - Both players still resupply before the extra attacking turn.
 
 **Summoner**
 Name a card. Look at opponent's hand and steal two cakes per copy they have.
+
 - Unless stated, the opponent's hand is still revealed if Summoner is blocked.
 - Summoner must be challenged before a card is named.
 - Unclaimable cards must be guessed by their unclaimable names.
 
 **Quartermaster**
 Increase your hand size by one for the rest of the bout.
+
 - Quartermaster can stack. Ex: playing two Quartermasters will increase handsize from 4 to 6.
 - If Quartermaster increases hand size, draw up to the new, increased hand size when resupplying for every turn afterwards.
 
 **Oracle**
 Look at opponent's hand. Take another turn.
+
 - The attacker takes another turn after resupplying.
 
 **Priest**
 Block one **Weapon**, **Magic**, or **Special**, and put it into your hand. Cancel its effects.
+
 - When Priest blocks a card with extra effects, like Scout or Summoner, it fully blocks all extra effects of the card, not just the cake theft.
 - Claiming Priest against more than 1 attacker will only remove one attacker. The rest of the cake theft still happens.
 - The blocking player chooses which facedown card to take.
 
 **Angel**
 Block all **Weapon**, **Magic**, and **Special** this turn, and cancel all effects. Your opponent takes another turn.
+
 - When Angel blocks a card with extra effects, like Scout or Summoner, he fully blocks all extra effects, not just cake theft.
 - Players still resupply before the extra turn.
 
 **Professor Baacrates.**
 **Professor** and **Sir Wolfy** become **Scientists** this turn.
+
 - Professor can be played without Sir Wolfy; he will still be a Scientist.
 - If Sir Wolfy becomes a Scientist due to Professor, he does not have to be revealed.
 
 **AGENT:U**
 Become any card in your opponent's hand.
+
 - Agent can only become cards in your opponent's current hand, not ones that have been already played.
 - The opponent must reveal his/her hand when Agent is challenged.
 
 **Pierrot Sheepington**
 Become a copy of the **Weapon**, **Magic**, or **Special** you claimed last turn.
+
 - On a player's first turn, Pierrot cannot transform into anything.
 - Pierrot allows **Specials** to be stacked together in the same turn. When resolving claims involving multiple specials, apply individual specials (and corresponding blockers) one at a time, resolving all effects fully before moving on. Some examples:
   - 2 Assassins steals 10 cakes.
@@ -323,12 +348,14 @@ Become a copy of the **Weapon**, **Magic**, or **Special** you claimed last turn
 Cake Duel can be expanded for 4 players! Players duel against each other in pairs. You will need two game sets to play.
 
 **Setup**
+
 1. Players form teams of two. Teammates should sit next to each other and can look at each other's hands.
 2. Deal each player a hand of 4 cards. Give the team that goes first 4 cakes. Give the other team 5 cakes. Cakes are a shared team resource.
 3. Create the basic 39-card deck by combining two copies of the basic 20-card deck, and removing one Sir Wolfy.
 4. (Optional) Combine both copies of the Special deck and draw 3 cards randomly, adding them into the deck for the full 42-card deck.
 
 End the bout if any of these conditions are met during a turn:
+
 - Either Team Has No Cakes
 - Any Player Challenges
 - All Players Pass
@@ -342,6 +369,7 @@ First team to win three bouts wins the duel!
 Although mostly similar to 2-players, team mode uses a slightly different attack order and also adds a new teammate trading phase.
 
 **Taking a Turn**
+
 - Turn follows the diagram on the right. Cycle back to player A after D's turn is done.
   - Team 1: A, B
   - Team 2: C, D
@@ -349,6 +377,7 @@ Although mostly similar to 2-players, team mode uses a slightly different attack
 - At the start of the turn, choose a player to attack. That defending player can only block with cards from his/her own hand. Cakes, however, are taken from the shared team pools.
 
 **New Phase: Trading**
+
 - Immediately after resolving the attack, but before resupplying, the active attacking player may exchange one of the cards in hand for a teammate's card. The blocking team does not get to trade.
 - If the deck has run out, the current attacking player may either swap a card, give a card, or receive a card from his/her teammate.
 - After trading, resupplying happens as normal.

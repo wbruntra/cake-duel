@@ -1,10 +1,10 @@
-import { useGame } from "@/context/GameContext";
-import CakeDisplay from "./CakeDisplay";
-import Card from "./Card";
+import { useGame } from '@/context/GameContext'
+import CakeDisplay from './CakeDisplay'
+import Card from './Card'
 
 export default function OpponentArea() {
-  const { state } = useGame();
-  if (!state) return null;
+  const { state } = useGame()
+  if (!state) return null
 
   return (
     <div className="opponent-area">
@@ -25,5 +25,5 @@ export default function OpponentArea() {
         </div>
       )}
     </div>
-  );
+  )
 }

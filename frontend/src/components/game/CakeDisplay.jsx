@@ -1,5 +1,5 @@
 export default function CakeDisplay({ count, label }) {
-  const cakes = Array.from({ length: Math.max(0, count) });
+  const cakes = Array.from({ length: Math.max(0, count) })
   return (
     <div className="cake-display">
       <span className="cake-label">{label}</span>
@@ -12,5 +12,5 @@ export default function CakeDisplay({ count, label }) {
         {count <= 0 && <span className="no-cakes">No cakes</span>}
       </div>
     </div>
-  );
+  )
 }
