@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { GameContext } from './context/GameContext'
+import { GameUIProvider } from './hooks/useGameUI'
 import { useWebSocket } from './hooks/useWebSocket'
 import Lobby from './components/lobby/Lobby'
 import GameView from './components/game/GameView'
-import './App.css'
 
 function getJoinParam() {
   const params = new URLSearchParams(window.location.search)
@@ -49,13 +49,12 @@ export default function App() {
   }
 
   return (
-    <GameContext.Provider value={{ state, connected, error, send }}>
-      <div className="app">
-        <button className="btn-leave" onClick={handleLeave}>
-          Leave Game
-        </button>
-        <GameView />
-      </div>
+    <GameContext.Provider value={{ state, connected, error, send, onLeave: handleLeave }}>
+      <GameUIProvider>
+        <div className="min-h-dvh grid grid-rows-[1fr]">
+          <GameView />
+        </div>
+      </GameUIProvider>
     </GameContext.Provider>
   )
 }

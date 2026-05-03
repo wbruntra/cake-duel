@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 export default function Lobby({ onGameStart, initialJoinId }) {
-  const [createdGame, setCreatedGame] = useState(null) // { gameId, playerId }
+  const [createdGame, setCreatedGame] = useState(null)
   const [joinId, setJoinId] = useState(initialJoinId ?? '')
   const [joinError, setJoinError] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -33,21 +33,26 @@ export default function Lobby({ onGameStart, initialJoinId }) {
   }
 
   return (
-    <div className="lobby">
-      <h1>Cake Duel</h1>
-      <p className="lobby-subtitle">Deploy your Sheepie troops and steal all the cakes!</p>
+    <div className="flex flex-col items-center justify-center min-h-dvh max-w-sm mx-auto px-6 gap-6">
+      <h1 className="text-4xl font-semibold text-text-h tracking-tight mt-0">Cake Duel</h1>
+      <p className="text-base text-text">Deploy your Sheepie troops and steal all the cakes!</p>
 
       {createdGame ? (
-        <div className="lobby-created">
-          <p className="lobby-waiting">Waiting for opponent — share this link:</p>
-          <div className="invite-link-row">
-            <code className="game-id">{createdGame.gameId}</code>
-            <button className="btn btn-copy" onClick={copyInviteLink}>
+        <div className="flex flex-col items-center gap-4 w-full">
+          <p className="text-sm text-text">Waiting for opponent — share this link:</p>
+          <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+            <code className="font-mono text-lg tracking-wider px-4 py-2 bg-code-bg rounded-lg text-text-h select-all">
+              {createdGame.gameId}
+            </code>
+            <button
+              className="h-11 px-4 text-sm rounded-lg border border-border bg-bg text-text-h active:scale-95 transition-transform touch-manipulation"
+              onClick={copyInviteLink}
+            >
               {copied ? 'Copied!' : 'Copy invite link'}
             </button>
           </div>
           <button
-            className="btn btn-primary"
+            className="h-14 w-full text-lg font-semibold rounded-xl bg-accent text-white active:scale-95 transition-transform touch-manipulation"
             onClick={() => onGameStart(createdGame.gameId, createdGame.playerId)}
           >
             Enter as Player 1
@@ -55,35 +60,41 @@ export default function Lobby({ onGameStart, initialJoinId }) {
         </div>
       ) : (
         <>
-          <div className="lobby-actions">
-            <button className="btn btn-primary" onClick={createGame}>
-              Create New Game
-            </button>
-          </div>
+          <button
+            className="h-14 w-full text-lg font-semibold rounded-xl bg-accent text-white active:scale-95 transition-transform touch-manipulation"
+            onClick={createGame}
+          >
+            Create New Game
+          </button>
 
-          <div className="lobby-divider">
+          <div className="flex items-center gap-3 w-full text-sm text-text">
+            <div className="flex-1 h-px bg-border" />
             <span>or join as opponent</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
 
-          <div className="lobby-join">
+          <div className="flex flex-col gap-3 w-full">
             <input
               type="text"
               placeholder="Enter game ID or paste invite link"
               value={joinId}
               onChange={(e) => {
                 const val = e.target.value
-                // accept full invite URL or bare ID
                 const match = val.match(/[?&]join=([^&]+)/)
                 setJoinId(match ? match[1] : val)
               }}
-              className="input"
+              className="w-full h-14 text-lg px-4 rounded-xl border border-border bg-bg text-text-h outline-none focus:border-accent touch-manipulation"
             />
-            <button className="btn btn-secondary" onClick={joinGame} disabled={!joinId.trim()}>
+            <button
+              className="h-14 w-full text-lg font-semibold rounded-xl bg-accent-light text-accent border border-accent-border active:scale-95 transition-transform touch-manipulation disabled:opacity-40"
+              onClick={joinGame}
+              disabled={!joinId.trim()}
+            >
               Join as Opponent
             </button>
           </div>
 
-          {joinError && <p className="lobby-error">{joinError}</p>}
+          {joinError && <p className="text-sm text-danger">{joinError}</p>}
         </>
       )}
     </div>
