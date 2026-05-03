@@ -1,6 +1,6 @@
 import type { GameState, Player, Claim } from './types'
 import { opponent, getCakes, getHand } from './types'
-import { getCardByName, createDeck, getAttackerTypes } from './cards'
+import { getCardByName, getCardById, createDeck, getAttackerTypes } from './cards'
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -298,6 +298,41 @@ export function determineBoutWinnerOnPass(state: GameState): Player {
   if (state.p1Cakes > state.p2Cakes) return 'p1'
   if (state.p2Cakes > state.p1Cakes) return 'p2'
   return state.turnPlayer === 'p1' ? 'p2' : 'p1'
+}
+
+function isClaimTruthful(claim: Claim): boolean {
+  return claim.playedCardIds.every(
+    (id) => getCardById(id)?.name.toLowerCase() === claim.cardName.toLowerCase(),
+  )
+}
+
+export function resolveChallenge(
+  state: GameState,
+  challenger: Player,
+  target: 'attack' | 'block',
+): { state: GameState; boutWinner: Player } | { state: GameState; error: string } {
+  if (target === 'attack') {
+    if (state.turnPhase !== 'block')
+      return { state, error: 'Can only challenge an attack during block phase' }
+    if (state.turnPlayer !== challenger) return { state, error: 'Not your turn' }
+    if (!state.attackClaim) return { state, error: 'No attack claim to challenge' }
+    const boutWinner: Player = isClaimTruthful(state.attackClaim)
+      ? state.attackClaim.player
+      : challenger
+    return { state, boutWinner }
+  }
+
+  // target === 'block'
+  if (state.turnPhase !== 'resolve')
+    return { state, error: 'Can only challenge a block during resolve phase' }
+  if (!state.attackClaim) return { state, error: 'No attack claim on record' }
+  if (state.attackClaim.player !== challenger)
+    return { state, error: 'Only the attacker can challenge a block' }
+  if (!state.blockClaim) return { state, error: 'No block claim to challenge' }
+  const boutWinner: Player = isClaimTruthful(state.blockClaim)
+    ? state.blockClaim.player
+    : challenger
+  return { state, boutWinner }
 }
 
 export function stateForPlayer(state: GameState, player: Player) {

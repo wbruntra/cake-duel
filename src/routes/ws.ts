@@ -12,6 +12,7 @@ import {
   stateForPlayer,
   endBout,
   determineBoutWinnerOnPass,
+  resolveChallenge,
 } from '../game/engine'
 import type { GameState, Player } from '../game/types'
 import { opponent } from '../game/types'
@@ -216,6 +217,25 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
           await saveGame(result.state)
           broadcast(result.state)
         }
+        break
+      }
+      case 'challenge': {
+        const target = msg.target as 'attack' | 'block'
+        if (target !== 'attack' && target !== 'block') {
+          send(ws, { type: 'error', message: 'Invalid challenge target' })
+          return
+        }
+        const result = resolveChallenge(state, player, target)
+        if ('error' in result) {
+          send(ws, { type: 'error', message: result.error })
+          return
+        }
+        const boutWinner = result.boutWinner as Player
+        const boutEndState = makeBoutEndState(result.state, boutWinner)
+        const afterEnd = endBout(result.state, boutWinner)
+        await saveGame(afterEnd)
+        broadcast(boutEndState)
+        setTimeout(() => broadcast(afterEnd), 3000)
         break
       }
       default:

@@ -19,6 +19,8 @@ export default function ActionBar() {
   const isGameOver = state.turnPhase === 'game_over'
   const isResupply = state.turnPhase === 'resupply'
   const isWaiting = !isMyTurn && (state.turnPhase === 'attack' || state.turnPhase === 'block')
+  const amAttacker = state.attackClaim?.player === state.player
+  const canChallengeBlock = isResolvePhase && amAttacker && state.blockClaim != null
 
   const attackerType = state.attackClaim
     ? getCardInfo(state.attackClaim.cardName)?.type || null
@@ -54,6 +56,11 @@ export default function ActionBar() {
   function doResolve() {
     tap()
     send({ type: 'resolve' })
+  }
+
+  function doChallenge(target) {
+    tap()
+    send({ type: 'challenge', target })
   }
 
   function doPlayAgain() {
@@ -138,7 +145,9 @@ export default function ActionBar() {
           >
             Let through
           </button>
-          <div className="h-5" />
+          <button className="text-sm text-text underline" onClick={() => doChallenge('attack')}>
+            Challenge attack!
+          </button>
         </div>
       )
     }
@@ -167,7 +176,13 @@ export default function ActionBar() {
         >
           Continue
         </button>
-        <div className="h-5" />
+        {canChallengeBlock ? (
+          <button className="text-sm text-text underline" onClick={() => doChallenge('block')}>
+            Challenge block!
+          </button>
+        ) : (
+          <div className="h-5" />
+        )}
       </div>
     )
   }
