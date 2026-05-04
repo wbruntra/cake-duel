@@ -9,6 +9,7 @@
     "backend": "bun --watch index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:update": "bun scripts/db-migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html,md}\" \"!**/node_modules/**\" \"!**/dist/**\" \"!**/*.lock\" \"!**/cake-duel.db\""

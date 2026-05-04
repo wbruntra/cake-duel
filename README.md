@@ -59,9 +59,23 @@ bun test
 
 ## Database
 
-SQLite via `bun:sqlite`. The database file (`cake-duel.db`) is created automatically on first run. To manage the schema with Drizzle Kit:
+SQLite via `bun:sqlite`. The database file (`cake-duel.db`) is created automatically on first run.
+
+### Migrations
+
+Schema is managed with Drizzle Kit. **Never alter the database directly** — always go through migrations so `__drizzle_migrations` stays in sync.
+
+After changing `src/db/schema.ts`, run:
 
 ```bash
-bunx drizzle-kit generate
-bunx drizzle-kit migrate
+bun run db:update
+```
+
+This generates a new migration file under `drizzle/` and immediately applies it. Both steps are required — running only `generate` leaves the DB unchanged, and running only `migrate` without generating first applies nothing new.
+
+If you need to run the steps separately:
+
+```bash
+bun run db:generate   # create migration file from schema diff
+bun run db:migrate    # apply pending migrations to the DB
 ```

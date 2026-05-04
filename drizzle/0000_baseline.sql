@@ -1,8 +1,20 @@
+CREATE TABLE `game_events` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`game_id` text NOT NULL,
+	`seq` integer NOT NULL,
+	`type` text NOT NULL,
+	`player` text,
+	`data` text,
+	`created_at` text NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `games` (
 	`id` text PRIMARY KEY NOT NULL,
 	`status` text DEFAULT 'waiting' NOT NULL,
 	`player1_id` text NOT NULL,
+	`player1_name` text DEFAULT 'Player 1' NOT NULL,
 	`player2_id` text,
+	`player2_name` text,
 	`current_bout` integer DEFAULT 1 NOT NULL,
 	`bout1_winner` text,
 	`bout2_winner` text,
@@ -26,5 +38,10 @@ CREATE TABLE `games` (
 	`block_cards` text,
 	`passed_last` text,
 	`bout_end_acks` text DEFAULT '[]' NOT NULL,
+	`challenge_result` text,
+	`challenge_acks` text DEFAULT '[]' NOT NULL,
+	`last_turn_result` text,
+	`turn_acks` text DEFAULT '[]' NOT NULL,
+	`last_action` text,
 	`created_at` text NOT NULL
 );

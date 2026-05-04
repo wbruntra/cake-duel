@@ -1,1 +1,0 @@
-ALTER TABLE `games` ADD `turn_acks` text DEFAULT '[]' NOT NULL;
