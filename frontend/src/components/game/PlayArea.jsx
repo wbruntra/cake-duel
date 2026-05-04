@@ -94,41 +94,43 @@ export default function PlayArea() {
       <LastActionBar state={state} />
 
       {state.attackClaim && (
-        <div className="text-center mb-3">
-          <div className="text-[11px] uppercase tracking-wide text-text mb-1">Attack Claim</div>
-          <div className="text-base font-semibold text-text-h">
-            {state.attackClaim.count}× {attackerCardInfo?.emoji} {state.attackClaim.cardName}
-            {attackerCardInfo?.cakes && (
-              <span className="text-sm text-text font-normal">
-                {' '}
-                🍰 {attackerCardInfo.cakes * state.attackClaim.count} total
-              </span>
-            )}
-          </div>
-          <div className="flex items-center justify-center gap-1 mt-2">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-0.5">
             {state.attackClaim.playedCardIds.map((id, i) => (
-              <Card key={i} cardId={id} faceDown size="sm" />
+              <Card key={i} cardId={id} faceDown size="xs" />
             ))}
+          </div>
+          <div className="text-left">
+            <div className="text-[10px] uppercase tracking-wide text-text leading-none mb-0.5">Attack</div>
+            <div className="text-sm font-semibold text-text-h leading-tight">
+              {state.attackClaim.count}× {attackerCardInfo?.emoji} {state.attackClaim.cardName}
+              {attackerCardInfo?.cakes && (
+                <span className="text-xs text-text font-normal">
+                  {' '}🍰{attackerCardInfo.cakes * state.attackClaim.count}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {state.blockClaim && (
-        <div className="text-center mb-3">
-          <div className="text-[11px] uppercase tracking-wide text-text mb-1">Block Claim</div>
-          <div className="text-base font-semibold text-text-h">
-            {state.blockClaim.count}× {blockerCardInfo?.emoji} {state.blockClaim.cardName}
-            {blockerCardInfo?.blocks && (
-              <span className="text-sm text-text font-normal">
-                {' '}
-                🛡️ {blockerCardInfo.blocks * state.blockClaim.count} blocked
-              </span>
-            )}
-          </div>
-          <div className="flex items-center justify-center gap-1 mt-2">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-0.5">
             {state.blockClaim.playedCardIds.map((id, i) => (
-              <Card key={i} cardId={id} faceDown size="sm" />
+              <Card key={i} cardId={id} faceDown size="xs" />
             ))}
+          </div>
+          <div className="text-left">
+            <div className="text-[10px] uppercase tracking-wide text-text leading-none mb-0.5">Block</div>
+            <div className="text-sm font-semibold text-text-h leading-tight">
+              {state.blockClaim.count}× {blockerCardInfo?.emoji} {state.blockClaim.cardName}
+              {blockerCardInfo?.blocks && (
+                <span className="text-xs text-text font-normal">
+                  {' '}🛡️{blockerCardInfo.blocks * state.blockClaim.count}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}

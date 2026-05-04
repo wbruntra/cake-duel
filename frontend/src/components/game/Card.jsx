@@ -2,6 +2,7 @@ import { getCardInfo, CARD_BACK_IMAGE } from '@/utils/cards'
 import { tap } from '@/utils/haptics'
 
 const SIZE_CLASSES = {
+  xs: 'w-8 h-11',
   sm: 'w-14 h-20',
   md: 'w-20 h-28',
   lg: 'w-28 h-40',
