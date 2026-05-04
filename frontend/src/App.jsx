@@ -5,7 +5,11 @@ import { useWebSocket } from './hooks/useWebSocket'
 import Lobby from './components/lobby/Lobby'
 import GameView from './components/game/GameView'
 
-function parseHashRoute() {
+function parseRoute() {
+  const search = new URLSearchParams(window.location.search)
+  const joinId = search.get('join')
+  if (joinId) return { joinId }
+
   const hash = window.location.hash
   if (!hash || hash === '#' || hash === '#/') return {}
   const path = hash.replace(/^#\/?/, '')
@@ -20,14 +24,18 @@ function parseHashRoute() {
 }
 
 function useHashRouter() {
-  const [route, setRoute] = useState(parseHashRoute)
+  const [route, setRoute] = useState(parseRoute)
 
   useEffect(() => {
-    function onHashChange() {
-      setRoute(parseHashRoute())
+    function onChange() {
+      setRoute(parseRoute())
     }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
+    window.addEventListener('hashchange', onChange)
+    window.addEventListener('popstate', onChange)
+    return () => {
+      window.removeEventListener('hashchange', onChange)
+      window.removeEventListener('popstate', onChange)
+    }
   }, [])
 
   return route
@@ -38,7 +46,7 @@ function navigateToGame(gameId, playerId) {
 }
 
 function navigateToLobby() {
-  window.location.hash = ''
+  window.location.href = window.location.pathname
 }
 
 export default function App() {

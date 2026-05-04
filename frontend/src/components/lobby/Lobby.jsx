@@ -64,8 +64,14 @@ export default function Lobby({ joinId, onNavigateToGame }) {
     }
   }
 
+  function buildInviteUrl() {
+    const base = `${window.location.origin}${window.location.pathname}`
+    const sep = base.includes('?') ? '&' : '?'
+    return `${base}${sep}join=${createdGame.gameId}`
+  }
+
   async function copyInviteLink() {
-    const url = `${window.location.origin}${window.location.pathname}#/${createdGame.gameId}`
+    const url = buildInviteUrl()
     await navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -94,7 +100,7 @@ export default function Lobby({ joinId, onNavigateToGame }) {
           <p className="text-sm text-text">Waiting for opponent — share this link:</p>
           <div className="flex items-center gap-2 flex-wrap justify-center w-full">
             <code className="font-mono text-lg tracking-wider px-4 py-2 bg-code-bg rounded-lg text-text-h select-all break-all">
-              {`${window.location.origin}${window.location.pathname}#/${createdGame.gameId}`}
+              {buildInviteUrl()}
             </code>
           </div>
           <button
@@ -137,7 +143,9 @@ export default function Lobby({ joinId, onNavigateToGame }) {
 
           <button
             className="text-sm text-text underline"
-            onClick={() => (window.location.hash = '')}
+            onClick={() => {
+              window.location.href = window.location.pathname
+            }}
           >
             Not your game? Create one instead
           </button>
