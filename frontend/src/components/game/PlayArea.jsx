@@ -51,14 +51,6 @@ function LastActionBar({ state }) {
   )
 }
 
-const PHASE_STYLES = {
-  attack: 'bg-attack-light text-attack',
-  block: 'bg-block-light text-block',
-  resolve: 'bg-resolve-light text-resolve',
-  challenge_result: 'bg-danger-light text-danger',
-  game_over: 'bg-accent-light text-accent',
-}
-
 export default function PlayArea() {
   const { state } = useGame()
   if (!state) return null
@@ -91,12 +83,6 @@ export default function PlayArea() {
   }
 
   const isMyTurn = state.turnPlayer === state.player
-  const phaseLabel = {
-    attack: isMyTurn ? 'Your Attack' : `${oppName}'s Attack`,
-    block: isMyTurn ? 'Your Block' : `${oppName}'s Block`,
-    resolve: 'Resolving',
-    challenge_result: 'Call the Bluff!',
-  }
 
   const attackerCardInfo = state.attackClaim ? getCardInfo(state.attackClaim.cardName) : null
   const blockerCardInfo = state.blockClaim ? getCardInfo(state.blockClaim.cardName) : null
@@ -104,17 +90,8 @@ export default function PlayArea() {
   const isWaiting = !isMyTurn && (state.turnPhase === 'attack' || state.turnPhase === 'block')
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 min-h-0 relative">
+    <div className="flex-1 flex flex-col items-center justify-center py-2 px-4 min-h-0 relative">
       <LastActionBar state={state} />
-      <motion.div
-        key={state.turnPhase}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2 }}
-        className={`px-4 py-2 rounded-full font-semibold text-sm mb-4 ${PHASE_STYLES[state.turnPhase] || 'bg-code-bg text-text'}`}
-      >
-        {phaseLabel[state.turnPhase] || state.turnPhase}
-      </motion.div>
 
       {state.attackClaim && (
         <div className="text-center mb-3">
