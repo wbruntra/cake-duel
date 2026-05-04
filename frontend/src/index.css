@@ -20,7 +20,7 @@
   --color-danger: #e53e3e;
   --color-danger-light: rgba(229, 62, 62, 0.1);
 
-  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Nunito', system-ui, sans-serif;
   --font-mono: ui-monospace, Consolas, monospace;
 }
 
