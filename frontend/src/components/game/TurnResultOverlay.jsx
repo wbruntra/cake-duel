@@ -10,7 +10,7 @@ const STAGE_DELAYS = {
   cakes: 1500,
   outcome: 2400,
 }
-const AUTO_ACK_DELAY_MS = 2400
+const AUTO_ACK_DELAY_MS = STAGE_DELAYS.outcome + 1500
 
 export default function TurnResultOverlay() {
   const { state, send } = useGame()

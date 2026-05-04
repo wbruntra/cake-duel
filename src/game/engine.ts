@@ -327,11 +327,11 @@ export function finishBout(state: GameState, boutWinner: Player): GameState {
   const p1Wins = newWinners.filter((w) => w === 'p1').length
   const p2Wins = newWinners.filter((w) => w === 'p2').length
 
-  if (p1Wins >= 3 || p2Wins >= 3) {
+  if (p1Wins >= 2 || p2Wins >= 2) {
     return {
       ...state,
       boutWinners: newWinners,
-      winner: p1Wins >= 3 ? 'p1' : 'p2',
+      winner: p1Wins >= 2 ? 'p1' : 'p2',
       status: 'finished',
       turnPhase: 'game_over',
     }
