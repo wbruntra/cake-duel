@@ -1,6 +1,6 @@
 import { useGame } from '@/context/GameContext'
 import { useGameUI } from '@/hooks/useGameUI'
-import { getCardInfo, getAttackerOptions, getBlockerName } from '@/utils/cards'
+import { getCardInfo, getBlockerName } from '@/utils/cards'
 import { tap } from '@/utils/haptics'
 
 const BAR_CLASS =
@@ -134,7 +134,6 @@ export default function ActionBar() {
       )
     }
 
-    const claimInfo = getAttackerOptions().find((o) => o.name === claimedName)
     return (
       <div className={BAR_CLASS}>
         <button
@@ -143,9 +142,14 @@ export default function ActionBar() {
         >
           Attack as {claimedName} (×{selectedIndices.length})
         </button>
-        <button className="text-sm text-text underline" onClick={doPass}>
-          Pass
-        </button>
+        <div className="flex gap-4">
+          <button className="text-sm text-text underline" onClick={doPass}>
+            Pass
+          </button>
+          <button className="text-sm text-text underline" onClick={() => setClaimPickerOpen(true)}>
+            Change claim
+          </button>
+        </div>
       </div>
     )
   }
@@ -154,15 +158,20 @@ export default function ActionBar() {
     if (selectedIndices.length === 0) {
       return (
         <div className={BAR_CLASS}>
-          <button
-            className="w-full h-14 text-lg font-semibold rounded-lg border border-danger text-danger bg-transparent active:scale-95 transition-transform touch-manipulation"
-            onClick={doSkipBlock}
-          >
-            Let through
-          </button>
-          <button className="text-sm text-text underline" onClick={() => doChallenge('attack')}>
-            Challenge attack!
-          </button>
+          <div className="flex gap-2 w-full">
+            <button
+              className="flex-1 h-14 text-base font-semibold rounded-lg border border-danger text-danger bg-transparent active:scale-95 transition-transform touch-manipulation"
+              onClick={doSkipBlock}
+            >
+              Let through
+            </button>
+            <button
+              className="flex-1 h-14 text-base font-semibold rounded-lg border border-accent text-accent bg-transparent active:scale-95 transition-transform touch-manipulation"
+              onClick={() => doChallenge('attack')}
+            >
+              Challenge attack!
+            </button>
+          </div>
         </div>
       )
     }
@@ -185,18 +194,28 @@ export default function ActionBar() {
   if (isResolvePhase) {
     return (
       <div className={BAR_CLASS}>
-        <button
-          className="w-full h-14 text-lg font-semibold rounded-lg bg-resolve text-white active:scale-95 transition-transform touch-manipulation"
-          onClick={doResolve}
-        >
-          Continue
-        </button>
         {canChallengeBlock ? (
-          <button className="text-sm text-text underline" onClick={() => doChallenge('block')}>
-            Challenge block!
-          </button>
+          <div className="flex gap-2 w-full">
+            <button
+              className="flex-1 h-14 text-base font-semibold rounded-lg bg-resolve text-white active:scale-95 transition-transform touch-manipulation"
+              onClick={doResolve}
+            >
+              Continue
+            </button>
+            <button
+              className="flex-1 h-14 text-base font-semibold rounded-lg border border-accent text-accent bg-transparent active:scale-95 transition-transform touch-manipulation"
+              onClick={() => doChallenge('block')}
+            >
+              Challenge block!
+            </button>
+          </div>
         ) : (
-          <div className="h-5" />
+          <button
+            className="w-full h-14 text-lg font-semibold rounded-lg bg-resolve text-white active:scale-95 transition-transform touch-manipulation"
+            onClick={doResolve}
+          >
+            Continue
+          </button>
         )}
       </div>
     )
