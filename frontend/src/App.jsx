@@ -6,55 +6,54 @@ import Lobby from './components/lobby/Lobby'
 import GameView from './components/game/GameView'
 
 function parseRoute() {
-  const search = new URLSearchParams(window.location.search)
-  const joinId = search.get('join')
+  const params = new URLSearchParams(window.location.search)
+  const gameId = params.get('game')
+  const playerId = params.get('player')
+  if (gameId && playerId) return { gameId, playerId }
+
+  const joinId = params.get('join')
   if (joinId) return { joinId }
 
-  const hash = window.location.hash
-  if (!hash || hash === '#' || hash === '#/') return {}
-  const path = hash.replace(/^#\/?/, '')
-  const parts = path.split('/')
-  if (parts.length === 1 && parts[0]) {
-    return { joinId: parts[0] }
-  }
-  if (parts.length >= 2 && parts[0] && parts[1]) {
-    return { gameId: parts[0], playerId: parts[1] }
-  }
   return {}
 }
 
-function useHashRouter() {
+function useRouter() {
   const [route, setRoute] = useState(parseRoute)
 
   useEffect(() => {
     function onChange() {
       setRoute(parseRoute())
     }
-    window.addEventListener('hashchange', onChange)
     window.addEventListener('popstate', onChange)
-    return () => {
-      window.removeEventListener('hashchange', onChange)
-      window.removeEventListener('popstate', onChange)
-    }
+    return () => window.removeEventListener('popstate', onChange)
   }, [])
 
   return route
 }
 
 function navigateToGame(gameId, playerId) {
-  window.location.hash = `#/${gameId}/${playerId}`
+  const url = `${window.location.pathname}?game=${encodeURIComponent(gameId)}&player=${encodeURIComponent(playerId)}`
+  window.history.pushState(null, '', url)
+  window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
 function navigateToLobby() {
-  window.location.href = window.location.pathname
+  window.history.pushState(null, '', window.location.pathname)
+  window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
 export default function App() {
-  const { gameId, playerId, joinId } = useHashRouter()
+  const { gameId, playerId, joinId } = useRouter()
   const { state, connected, error, send } = useWebSocket(gameId, playerId)
 
   if (!gameId || !playerId) {
-    return <Lobby joinId={joinId} onNavigateToGame={navigateToGame} />
+    return (
+      <Lobby
+        joinId={joinId}
+        onNavigateToGame={navigateToGame}
+        onNavigateToLobby={navigateToLobby}
+      />
+    )
   }
 
   function handleLeave() {

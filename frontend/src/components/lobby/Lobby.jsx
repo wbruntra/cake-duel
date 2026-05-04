@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function Lobby({ joinId, onNavigateToGame }) {
+export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   const [name, setName] = useState(() => {
     try {
       return window.localStorage.getItem('cakeduel_name') || ''
@@ -22,6 +22,10 @@ export default function Lobby({ joinId, onNavigateToGame }) {
       } catch {}
     }
   }, [name])
+
+  useEffect(() => {
+    if (joinId) setJoinIdValue(joinId)
+  }, [joinId])
 
   async function createGame() {
     setCreating(true)
@@ -65,20 +69,25 @@ export default function Lobby({ joinId, onNavigateToGame }) {
   }
 
   function buildInviteUrl() {
-    const base = `${window.location.origin}${window.location.pathname}`
-    const sep = base.includes('?') ? '&' : '?'
-    return `${base}${sep}join=${createdGame.gameId}`
+    return `${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(createdGame.gameId)}`
   }
 
   async function copyInviteLink() {
-    const url = buildInviteUrl()
-    await navigator.clipboard.writeText(url)
+    await navigator.clipboard.writeText(buildInviteUrl())
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   function enterAsPlayer1() {
     onNavigateToGame(createdGame.gameId, createdGame.playerId)
+  }
+
+  function extractGameId(val) {
+    const urlMatch = val.match(/[?&]join=([^&]+)/)
+    if (urlMatch) return urlMatch[1]
+    const idMatch = val.match(/([a-z0-9]{8})/)
+    if (idMatch) return idMatch[1]
+    return val
   }
 
   return (
@@ -141,12 +150,7 @@ export default function Lobby({ joinId, onNavigateToGame }) {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <button
-            className="text-sm text-text underline"
-            onClick={() => {
-              window.location.href = window.location.pathname
-            }}
-          >
+          <button className="text-sm text-text underline" onClick={onNavigateToLobby}>
             Not your game? Create one instead
           </button>
         </>
@@ -171,16 +175,7 @@ export default function Lobby({ joinId, onNavigateToGame }) {
               type="text"
               placeholder="Enter game ID or paste invite link"
               value={joinIdValue}
-              onChange={(e) => {
-                const val = e.target.value
-                const match = val.match(/[#/]([a-z0-9]{8})(?:\/|$)/)
-                if (match) {
-                  setJoinIdValue(match[1])
-                } else {
-                  const joinMatch = val.match(/[?&]join=([^&]+)/)
-                  setJoinIdValue(joinMatch ? joinMatch[1] : val)
-                }
-              }}
+              onChange={(e) => setJoinIdValue(extractGameId(e.target.value))}
               className="w-full h-14 text-lg px-4 rounded-xl border border-border bg-bg text-text-h outline-none focus:border-accent touch-manipulation"
             />
             <button

@@ -21,9 +21,7 @@ export default function GameView() {
     if (!isWaiting || !gameId) return
 
     function getPlayerId() {
-      const hash = window.location.hash
-      const parts = hash.replace(/^#\/?/, '').split('/')
-      return parts[1] || null
+      return new URLSearchParams(window.location.search).get('player')
     }
 
     const interval = setInterval(async () => {
@@ -75,7 +73,7 @@ export default function GameView() {
   }
 
   if (state.status === 'waiting') {
-    const gameUrl = `${window.location.origin}${window.location.pathname}#/${state.id}`
+    const gameUrl = `${window.location.origin}${window.location.pathname}?join=${state.id}`
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh gap-4 px-6">
         <h2 className="text-2xl font-semibold text-text-h">Waiting for opponent</h2>
