@@ -5,6 +5,88 @@ import ChallengeResultScreen from './ChallengeResultScreen'
 import TurnResultOverlay from './TurnResultOverlay'
 import { getCardInfo } from '@/utils/cards'
 import { motion } from 'motion/react'
+import { useState, useEffect, useRef } from 'react'
+
+function useLastEvent(state) {
+  const [lastEvent, setLastEvent] = useState(null)
+  const prevPhaseRef = useRef(null)
+  const prevPassedLastRef = useRef(null)
+  const capturedResultRef = useRef(null)
+
+  useEffect(() => {
+    if (!state) return
+
+    const prevPhase = prevPhaseRef.current
+    const prevPassedLast = prevPassedLastRef.current
+
+    // Capture the result while it's still available (during turn_resolution)
+    if (state.lastTurnResult) {
+      capturedResultRef.current = state.lastTurnResult
+    }
+
+    // Someone passed
+    if (state.passedLast !== prevPassedLast && state.passedLast !== null) {
+      const isMe = state.passedLast === state.player
+      setLastEvent({ type: 'pass', isMe })
+    }
+
+    // Turn resolution just finished → back to attack phase
+    if (prevPhase === 'turn_resolution' && state.turnPhase === 'attack') {
+      const r = capturedResultRef.current
+      if (r) setLastEvent({ type: 'attack', result: r, player: state.player })
+    }
+
+    prevPhaseRef.current = state.turnPhase
+    prevPassedLastRef.current = state.passedLast
+  }, [state?.turnPhase, state?.passedLast])
+
+  return lastEvent
+}
+
+function LastEventBar({ event, state }) {
+  if (!event) return null
+
+  const myName = state.myName || 'You'
+  const oppName = state.opponentName || 'Opponent'
+
+  let text = null
+
+  if (event.type === 'pass') {
+    text = event.isMe ? 'You passed' : `${oppName} passed`
+  } else if (event.type === 'attack') {
+    const { result, player } = event
+    const { attackClaim, blockClaim, cakesStolen } = result
+    const iAttacked = attackClaim.player === player
+    const attackerLabel = iAttacked ? myName : oppName
+    const cardInfo = getCardInfo(attackClaim.cardName)
+    const emoji = cardInfo?.emoji ?? ''
+
+    let outcome
+    if (cakesStolen > 0) {
+      outcome = iAttacked ? `+${cakesStolen}🍰 stolen` : `${cakesStolen}🍰 lost`
+    } else if (blockClaim) {
+      outcome = 'blocked'
+    } else {
+      outcome = 'no effect'
+    }
+
+    text = `${attackerLabel} claimed ${attackClaim.count}× ${emoji} ${attackClaim.cardName} — ${outcome}`
+  }
+
+  if (!text) return null
+
+  return (
+    <motion.div
+      key={text}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="text-[11px] text-text/60 text-center px-4 pb-1 truncate"
+    >
+      {text}
+    </motion.div>
+  )
+}
 
 const PHASE_STYLES = {
   attack: 'bg-attack-light text-attack',
@@ -16,6 +98,7 @@ const PHASE_STYLES = {
 
 export default function PlayArea() {
   const { state } = useGame()
+  const lastEvent = useLastEvent(state)
   if (!state) return null
 
   const oppName = state.opponentName || 'Opponent'
@@ -60,6 +143,7 @@ export default function PlayArea() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 min-h-0 relative">
+      <LastEventBar event={lastEvent} state={state} />
       <motion.div
         key={state.turnPhase}
         initial={{ opacity: 0, scale: 0.9 }}
