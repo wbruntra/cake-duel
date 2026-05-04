@@ -8,7 +8,7 @@ Style frame: Clean vector art, bold outlines, muted pastel backgrounds, chunky s
 
 ## Soldier (weapon · steals 1 cake · amber/orange)
 
-Cute pastry soldier character, a shortbread cookie person wearing a simple helmet and holding a sword, standing in a determined battle pose, flat vector illustration with bold outlines, warm amber/orange background, minimalist style, mobile card game art, no text
+Cute pastry soldier character, a shortbread cookie person wearing a simple helmet and holding a sword, standing in a determined battle pose, flat vector illustration with bold outlines, warm red background, minimalist style, mobile card game art, no text
 https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-01-33-337Z.jpg
 
 ## Archer (weapon · steals 1 cake · amber/orange)

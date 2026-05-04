@@ -4,17 +4,17 @@ import { resolve, join } from 'node:path'
 
 const IMAGES = {
   soldier:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-01-33-337Z.jpg',
-  archer:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-33-522Z.jpg',
-  wizard:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-49-654Z.jpg',
-  defender:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-00-525Z.jpg',
-  scientist:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-09-904Z.jpg',
-  sir_wolfy:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-22-716Z.jpg',
+    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-04T09-42-11-706Z.jpg',
+  // archer:
+  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-33-522Z.jpg',
+  // wizard:
+  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-49-654Z.jpg',
+  // defender:
+  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-00-525Z.jpg',
+  // scientist:
+  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-09-904Z.jpg',
+  // sir_wolfy:
+  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-22-716Z.jpg',
 }
 
 const CARD_SIZE = 400

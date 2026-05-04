@@ -110,6 +110,38 @@ export default function Lobby({ joinId, onNavigateToGame }) {
             Enter as Player 1
           </button>
         </div>
+      ) : joinId ? (
+        <>
+          <p className="text-base text-text-h">
+            Join game{' '}
+            <code className="font-mono tracking-wider px-2 py-0.5 bg-code-bg rounded">
+              {joinId}
+            </code>
+          </p>
+
+          <div className="flex flex-col gap-3 w-full">
+            <button
+              className="h-14 w-full text-lg font-semibold rounded-xl bg-accent text-white active:scale-95 transition-transform touch-manipulation disabled:opacity-40"
+              onClick={joinGame}
+              disabled={!joinIdValue.trim() || joining}
+            >
+              {joining ? 'Joining...' : 'Join Game'}
+            </button>
+          </div>
+
+          {joinError && <p className="text-sm text-danger">{joinError}</p>}
+
+          <div className="flex items-center gap-3 w-full text-sm text-text">
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <button
+            className="text-sm text-text underline"
+            onClick={() => (window.location.hash = '')}
+          >
+            Not your game? Create one instead
+          </button>
+        </>
       ) : (
         <>
           <button
