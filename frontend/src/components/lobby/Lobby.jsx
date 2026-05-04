@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import RulesModal from './RulesModal'
 
 const CPU_DIFFICULTIES = [
   { value: 'easy', label: 'Easy', description: '100 simulations per move' },
@@ -22,6 +23,7 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   const [copied, setCopied] = useState(false)
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   useEffect(() => {
     if (name) {
@@ -120,9 +122,19 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   }
 
   return (
+    <>
+    {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     <div className="flex flex-col items-center justify-center min-h-dvh max-w-sm mx-auto px-6 gap-6">
-      <h1 className="text-4xl font-semibold text-text-h tracking-tight mt-0">Cake Duel</h1>
-      <p className="text-base text-text">Deploy your Sheepie troops and steal all the cakes!</p>
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="text-4xl font-semibold text-text-h tracking-tight mt-0">Cake Duel</h1>
+        <p className="text-base text-text">Deploy your Sheepie troops and steal all the cakes!</p>
+        <button
+          onClick={() => setShowRules(true)}
+          className="text-sm text-accent underline underline-offset-2 touch-manipulation active:opacity-70"
+        >
+          How to Play
+        </button>
+      </div>
 
       <input
         type="text"
@@ -248,5 +260,6 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
         </>
       )}
     </div>
+    </>
   )
 }
