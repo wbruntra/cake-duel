@@ -5,12 +5,23 @@ import { eq } from 'drizzle-orm'
 import { newBout, stateForPlayer } from '../game/engine'
 import type { GameState, Player } from '../game/types'
 import { getAIMove } from '../ai/llm-player'
+import { getCPUMove } from '../ai/cpu-player'
+import type { MCTSDifficulty } from '../ai/mcts/types'
 import { loadGame, saveGame, appendEvent } from '../db/game-store'
 import { broadcast } from '../services/connections'
 import { handleMove } from '../services/game'
+import { scheduleCPUMoves } from '../services/cpu-player'
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10)
+}
+
+const CPU_DIFFICULTIES: MCTSDifficulty[] = ['easy', 'medium', 'hard']
+const CPU_NAMES: Record<MCTSDifficulty, string> = {
+  easy: 'CPU (Easy)',
+  training: 'CPU (Easy)',
+  medium: 'CPU (Medium)',
+  hard: 'CPU (Hard)',
 }
 
 const app = new Hono()
@@ -20,6 +31,9 @@ app.post('/api/games', async (c) => {
   const playerId = generateId()
   const gameId = generateId()
   const playerName = (body.name || '').trim().slice(0, 20) || 'Player 1'
+
+  const cpuDifficulty: MCTSDifficulty | null =
+    body.cpuDifficulty && CPU_DIFFICULTIES.includes(body.cpuDifficulty) ? body.cpuDifficulty : null
 
   const gameState: GameState = {
     id: gameId,
@@ -41,6 +55,8 @@ app.post('/api/games', async (c) => {
     p2HandSize: 4,
     deck: [],
     discard: [],
+    p1Discard: [],
+    p2Discard: [],
     attackClaim: null,
     blockClaim: null,
     passedLast: null,
@@ -50,6 +66,49 @@ app.post('/api/games', async (c) => {
     lastTurnResult: null,
     turnAcks: [],
     lastAction: null,
+    cpuPlayer: null,
+    cpuDifficulty: null,
+  }
+
+  if (cpuDifficulty) {
+    const cpuPlayerId = generateId()
+    gameState.player2Id = cpuPlayerId
+    gameState.player2Name = CPU_NAMES[cpuDifficulty]
+    gameState.cpuPlayer = 'p2'
+    gameState.cpuDifficulty = cpuDifficulty
+
+    const startedState = newBout(gameState, 'p1')
+    startedState.player2Id = cpuPlayerId
+    startedState.player2Name = CPU_NAMES[cpuDifficulty]
+
+    await db.insert(games).values({
+      id: gameId,
+      createdAt: new Date().toISOString(),
+      status: startedState.status,
+      player1Id: startedState.player1Id,
+      player1Name: startedState.player1Name,
+      player2Id: startedState.player2Id,
+      player2Name: startedState.player2Name,
+      currentBout: startedState.currentBout,
+      p1Cakes: startedState.p1Cakes,
+      p2Cakes: startedState.p2Cakes,
+      p1HandSize: startedState.p1HandSize,
+      p2HandSize: startedState.p2HandSize,
+      cpuPlayer: startedState.cpuPlayer,
+      cpuDifficulty: startedState.cpuDifficulty,
+    })
+
+    await saveGame(startedState)
+    await appendEvent(gameId, null, 'game_start', {
+      player1: startedState.player1Name,
+      player2: startedState.player2Name,
+      cpu: true,
+      cpuDifficulty,
+    })
+
+    scheduleCPUMoves(gameId)
+
+    return c.json({ gameId, playerId, cpu: true })
   }
 
   await db.insert(games).values({
@@ -79,6 +138,7 @@ app.post('/api/games/:id/join', async (c) => {
 
   const row = rows[0]!
   if (row.status !== 'waiting') return c.json({ error: 'Game not joinable' }, 400)
+  if (row.cpuPlayer) return c.json({ error: 'Game has CPU opponent' }, 400)
 
   const playerId = generateId()
   const playerName = (body.name || '').trim().slice(0, 20) || 'Player 2'

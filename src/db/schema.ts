@@ -44,6 +44,8 @@ export const games = sqliteTable('games', {
   p2HandSize: integer('p2_handsize').notNull().default(4),
   deck: text('deck').notNull().default('[]'),
   discard: text('discard').notNull().default('[]'),
+  p1Discard: text('p1_discard').notNull().default('[]'),
+  p2Discard: text('p2_discard').notNull().default('[]'),
   attackClaim: text('attack_claim'),
   attackCount: integer('attack_count'),
   blockClaim: text('block_claim'),
@@ -57,5 +59,7 @@ export const games = sqliteTable('games', {
   lastTurnResult: text('last_turn_result'),
   turnAcks: text('turn_acks').notNull().default('[]'),
   lastAction: text('last_action'),
+  cpuPlayer: text('cpu_player'),
+  cpuDifficulty: text('cpu_difficulty', { enum: ['easy', 'training', 'medium', 'hard'] }),
   createdAt: text('created_at').notNull(),
 })

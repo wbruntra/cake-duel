@@ -18,10 +18,12 @@ export default function ActionBar() {
   const isMyTurn = state.turnPlayer === state.player
   const isAttackPhase = state.turnPhase === 'attack' && isMyTurn
   const isBlockPhase = state.turnPhase === 'block' && isMyTurn
-  const isResolvePhase = state.turnPhase === 'resolve'
+  const isResolvePhase = state.turnPhase === 'resolve' && isMyTurn
   const isGameOver = state.turnPhase === 'game_over'
   const isChallengeResult = state.turnPhase === 'challenge_result'
-  const isWaiting = !isMyTurn && (state.turnPhase === 'attack' || state.turnPhase === 'block')
+  const isWaiting =
+    !isMyTurn &&
+    (state.turnPhase === 'attack' || state.turnPhase === 'block' || state.turnPhase === 'resolve')
   const amAttacker = state.attackClaim?.player === state.player
   const canChallengeBlock = isResolvePhase && amAttacker && state.blockClaim != null
 

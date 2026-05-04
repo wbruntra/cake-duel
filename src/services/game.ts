@@ -19,6 +19,7 @@ import type { GameState, Player } from '../game/types'
 import { opponent } from '../game/types'
 import { loadGame, saveGame, appendEvent } from '../db/game-store'
 import { broadcast } from './connections'
+import { scheduleCPUMoves } from './cpu-player'
 
 export type Move =
   | { type: 'attack'; cardIds: string[]; claimedName: string }
@@ -74,6 +75,7 @@ function scheduleBoutAutoAdvance(gameId: string) {
       const next = startNextBout(state)
       await saveGame(next)
       broadcast(next)
+      scheduleCPUMoves(gameId)
     }, BOUT_ACK_TIMEOUT_MS),
   )
 }
@@ -90,6 +92,7 @@ function scheduleChallengeAutoAdvance(gameId: string) {
       await saveGame(next)
       broadcast(next)
       if (next.turnPhase === 'bout_end') scheduleBoutAutoAdvance(gameId)
+      scheduleCPUMoves(gameId)
     }, CHALLENGE_ACK_TIMEOUT_MS),
   )
 }
@@ -116,10 +119,12 @@ async function advancePastTurnResolution(gameId: string, state: GameState) {
     await logBoutOrGameEnd(gameId, next, 'attack')
     broadcast(next)
     if (next.turnPhase === 'bout_end') scheduleBoutAutoAdvance(gameId)
+    scheduleCPUMoves(gameId)
   } else {
     const next = resupply(state)
     await saveGame(next)
     broadcast(next)
+    scheduleCPUMoves(gameId)
   }
 }
 
@@ -139,56 +144,62 @@ export async function handleMove(
   player: Player,
   move: Move,
 ): Promise<{ error: string } | { ok: true }> {
+  let result: { error: string } | { ok: true }
   switch (move.type) {
     case 'attack': {
-      const result = playAttack(state, player, move.cardIds, move.claimedName)
-      if (result.error) return { error: result.error }
+      const r = playAttack(state, player, move.cardIds, move.claimedName)
+      if (r.error) return { error: r.error }
       clearChallengeTimer(gameId)
-      await saveGame(result.state)
+      await saveGame(r.state)
       await appendEvent(gameId, player, 'attack', {
         cardIds: move.cardIds,
         claimedName: move.claimedName,
         count: move.cardIds.length,
       })
-      broadcast(result.state)
+      broadcast(r.state)
+      scheduleCPUMoves(gameId)
       return { ok: true }
     }
 
     case 'block': {
-      const result = playBlock(state, player, move.cardIds)
-      if (result.error) return { error: result.error }
-      await saveGame(result.state)
+      const r = playBlock(state, player, move.cardIds)
+      if (r.error) return { error: r.error }
+      await saveGame(r.state)
       await appendEvent(gameId, player, 'block', {
         cardIds: move.cardIds,
         count: move.cardIds.length,
       })
-      broadcast(result.state)
+      broadcast(r.state)
+      scheduleCPUMoves(gameId)
       return { ok: true }
     }
 
     case 'skipBlock': {
-      const result = skipBlock(state, player)
-      if (result.error) return { error: result.error }
-      await saveGame(result.state)
+      const r = skipBlock(state, player)
+      if (r.error) return { error: r.error }
+      await saveGame(r.state)
       await appendEvent(gameId, player, 'skip_block')
-      broadcast(result.state)
+      broadcast(r.state)
+      scheduleCPUMoves(gameId)
       return { ok: true }
     }
 
     case 'pass': {
-      const result = pass(state, player)
-      if (result.error) return { error: result.error }
+      const r = pass(state, player)
+      if (r.error) return { error: r.error }
       await appendEvent(gameId, player, 'pass')
-      if (result.doublePass) {
-        const boutWinner = determineBoutWinnerOnPass(result.state)
-        const next = finishBout(result.state, boutWinner)
+      if (r.doublePass) {
+        const boutWinner = determineBoutWinnerOnPass(r.state)
+        const next = finishBout(r.state, boutWinner)
         await saveGame(next)
         await logBoutOrGameEnd(gameId, next, 'pass')
         broadcast(next)
         if (next.turnPhase === 'bout_end') scheduleBoutAutoAdvance(gameId)
+        scheduleCPUMoves(gameId)
       } else {
-        await saveGame(result.state)
-        broadcast(result.state)
+        await saveGame(r.state)
+        broadcast(r.state)
+        scheduleCPUMoves(gameId)
       }
       return { ok: true }
     }
@@ -206,6 +217,7 @@ export async function handleMove(
       })
       broadcast(next)
       scheduleTurnResolutionAutoAdvance(gameId)
+      scheduleCPUMoves(gameId)
       return { ok: true }
     }
 
@@ -213,18 +225,19 @@ export async function handleMove(
       if (move.target !== 'attack' && move.target !== 'block') {
         return { error: 'Invalid challenge target' }
       }
-      const result = resolveChallenge(state, player, move.target)
-      if ('error' in result) return { error: result.error }
-      const next = toChallengeResult(result.state, result.challengeResult)
+      const r = resolveChallenge(state, player, move.target)
+      if ('error' in r) return { error: r.error }
+      const next = toChallengeResult(r.state, r.challengeResult)
       await saveGame(next)
       await appendEvent(gameId, player, 'challenge', {
         target: move.target,
-        claimWasTruthful: result.challengeResult.claimWasTruthful,
-        boutWinner: result.challengeResult.boutWinner,
-        revealedCardNames: result.challengeResult.revealedCardNames,
+        claimWasTruthful: r.challengeResult.claimWasTruthful,
+        boutWinner: r.challengeResult.boutWinner,
+        revealedCardNames: r.challengeResult.revealedCardNames,
       })
       broadcast(next)
       scheduleChallengeAutoAdvance(gameId)
+      scheduleCPUMoves(gameId)
       return { ok: true }
     }
 
@@ -238,6 +251,7 @@ export async function handleMove(
         await saveGame(ackResult.state)
         broadcast(ackResult.state)
       }
+      scheduleCPUMoves(gameId)
       return { ok: true }
     }
 
@@ -249,9 +263,11 @@ export async function handleMove(
         const next = startNextBout(ackResult.state)
         await saveGame(next)
         broadcast(next)
+        scheduleCPUMoves(gameId)
       } else {
         await saveGame(ackResult.state)
         broadcast(ackResult.state)
+        scheduleCPUMoves(gameId)
       }
       return { ok: true }
     }
@@ -266,9 +282,11 @@ export async function handleMove(
         await logBoutOrGameEnd(gameId, next, 'challenge')
         broadcast(next)
         if (next.turnPhase === 'bout_end') scheduleBoutAutoAdvance(gameId)
+        scheduleCPUMoves(gameId)
       } else {
         await saveGame(ackResult.state)
         broadcast(ackResult.state)
+        scheduleCPUMoves(gameId)
       }
       return { ok: true }
     }

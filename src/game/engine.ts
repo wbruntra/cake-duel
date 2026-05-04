@@ -40,10 +40,12 @@ export function newBout(state: GameState, startingPlayer: Player): GameState {
     status: 'playing',
     p1Hand: p1,
     p2Hand: p2,
-    p1Cakes: 3,
-    p2Cakes: 4,
+    p1Cakes: startingPlayer === 'p1' ? 3 : 4,
+    p2Cakes: startingPlayer === 'p2' ? 3 : 4,
     deck: d2,
     discard: [],
+    p1Discard: [],
+    p2Discard: [],
     attackClaim: null,
     blockClaim: null,
     passedLast: null,
@@ -90,6 +92,10 @@ export function playAttack(
       ...state,
       [player === 'p1' ? 'p1Hand' : 'p2Hand']: newHand,
       discard: [...state.discard, ...cardIds],
+      [player === 'p1' ? 'p1Discard' : 'p2Discard']: [
+        ...state[player === 'p1' ? 'p1Discard' : 'p2Discard'],
+        ...cardIds,
+      ],
       attackClaim: claim,
       passedLast: null,
       turnPhase: 'block',
@@ -138,8 +144,13 @@ export function playBlock(
       ...state,
       [player === 'p1' ? 'p1Hand' : 'p2Hand']: newHand,
       discard: [...state.discard, ...cardIds],
+      [player === 'p1' ? 'p1Discard' : 'p2Discard']: [
+        ...state[player === 'p1' ? 'p1Discard' : 'p2Discard'],
+        ...cardIds,
+      ],
       blockClaim: claim,
       turnPhase: 'resolve',
+      turnPlayer: state.attackClaim.player,
     },
   }
 }
@@ -147,11 +158,13 @@ export function playBlock(
 export function skipBlock(state: GameState, player: Player): { state: GameState; error?: string } {
   if (state.turnPlayer !== player) return { state, error: 'Not your turn' }
   if (state.turnPhase !== 'block') return { state, error: 'Not in block phase' }
+  if (!state.attackClaim) return { state, error: 'No attack to skip' }
 
   return {
     state: {
       ...state,
       turnPhase: 'resolve',
+      turnPlayer: state.attackClaim.player,
     },
   }
 }
@@ -499,6 +512,8 @@ export function stateForPlayer(state: GameState, player: Player) {
     myName: player === 'p1' ? state.player1Name : state.player2Name!,
     opponentName: opp === 'p1' ? state.player1Name : state.player2Name,
     lastAction: state.lastAction ?? null,
+    cpuPlayer: state.cpuPlayer,
+    cpuDifficulty: state.cpuDifficulty,
   }
 }
 

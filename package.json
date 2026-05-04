@@ -12,7 +12,10 @@
     "db:update": "bun scripts/db-migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html,md}\" \"!**/node_modules/**\" \"!**/dist/**\" \"!**/*.lock\" \"!**/cake-duel.db\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html,md}\" \"!**/node_modules/**\" \"!**/dist/**\" \"!**/*.lock\" \"!**/cake-duel.db\"",
+    "ai:self-play": "bun run src/ai/mcts/self-play.ts",
+    "ai:evaluate": "bun run src/ai/mcts/evaluate.ts",
+    "ai:train": "bun run src/ai/mcts/self-play.ts medium medium 1000"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 
+const CPU_DIFFICULTIES = [
+  { value: 'easy', label: 'Easy', description: '100 simulations per move' },
+  { value: 'medium', label: 'Medium', description: '1,000 simulations per move' },
+  { value: 'hard', label: 'Hard', description: '5,000 simulations per move' },
+]
+
 export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
   const [name, setName] = useState(() => {
     try {
@@ -9,6 +15,8 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
     }
   })
   const [createdGame, setCreatedGame] = useState(null)
+  const [cpuDifficulty, setCpuDifficulty] = useState('medium')
+  const [cpuCreating, setCpuCreating] = useState(false)
   const [joinIdValue, setJoinIdValue] = useState(joinId ?? '')
   const [joinError, setJoinError] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -41,6 +49,27 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
       setJoinError('Failed to create game')
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function createCpuGame() {
+    setCpuCreating(true)
+    setJoinError(null)
+    try {
+      const res = await fetch('/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          cpuDifficulty,
+        }),
+      })
+      const data = await res.json()
+      onNavigateToGame(data.gameId, data.playerId)
+    } catch {
+      setJoinError('Failed to create CPU game')
+    } finally {
+      setCpuCreating(false)
     }
   }
 
@@ -156,13 +185,43 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
         </>
       ) : (
         <>
-          <button
-            className="h-14 w-full text-lg font-semibold rounded-xl bg-accent text-white active:scale-95 transition-transform touch-manipulation disabled:opacity-40"
-            onClick={createGame}
-            disabled={creating}
-          >
-            {creating ? 'Creating...' : 'Create New Game'}
-          </button>
+          <div className="flex flex-col gap-3 w-full">
+            <button
+              className="h-14 w-full text-lg font-semibold rounded-xl bg-accent text-white active:scale-95 transition-transform touch-manipulation disabled:opacity-40"
+              onClick={createGame}
+              disabled={creating}
+            >
+              {creating ? 'Creating...' : 'Create New Game'}
+            </button>
+
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-text text-center">Play against the computer</p>
+              <div className="flex gap-2">
+                {CPU_DIFFICULTIES.map((d) => (
+                  <button
+                    key={d.value}
+                    className={`flex-1 py-2 text-sm rounded-lg border transition-transform touch-manipulation ${
+                      cpuDifficulty === d.value
+                        ? 'border-accent bg-accent/10 text-accent font-semibold'
+                        : 'border-border bg-bg text-text'
+                    }`}
+                    onClick={() => setCpuDifficulty(d.value)}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="h-14 w-full text-lg font-semibold rounded-xl bg-accent-light text-accent border border-accent-border active:scale-95 transition-transform touch-manipulation disabled:opacity-40"
+                onClick={createCpuGame}
+                disabled={cpuCreating}
+              >
+                {cpuCreating ? 'Starting...' : 'Play vs CPU'}
+              </button>
+            </div>
+          </div>
+
+          {joinError && <p className="text-sm text-danger">{joinError}</p>}
 
           <div className="flex items-center gap-3 w-full text-sm text-text">
             <div className="flex-1 h-px bg-border" />
@@ -186,8 +245,6 @@ export default function Lobby({ joinId, onNavigateToGame, onNavigateToLobby }) {
               {joining ? 'Joining...' : 'Join as Opponent'}
             </button>
           </div>
-
-          {joinError && <p className="text-sm text-danger">{joinError}</p>}
         </>
       )}
     </div>

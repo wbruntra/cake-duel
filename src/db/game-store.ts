@@ -24,6 +24,8 @@ function parseGame(row: any): GameState {
     p2HandSize: row.p2HandSize,
     deck: JSON.parse(row.deck),
     discard: JSON.parse(row.discard),
+    p1Discard: JSON.parse(row.p1Discard || '[]'),
+    p2Discard: JSON.parse(row.p2Discard || '[]'),
     attackClaim: row.attackClaim ? JSON.parse(row.attackClaim) : null,
     blockClaim: row.blockClaim ? JSON.parse(row.blockClaim) : null,
     passedLast: row.passedLast as Player | null,
@@ -33,6 +35,8 @@ function parseGame(row: any): GameState {
     lastTurnResult: row.lastTurnResult ? JSON.parse(row.lastTurnResult) : null,
     turnAcks: JSON.parse(row.turnAcks || '[]'),
     lastAction: row.lastAction ? JSON.parse(row.lastAction) : null,
+    cpuPlayer: row.cpuPlayer as GameState['cpuPlayer'],
+    cpuDifficulty: row.cpuDifficulty as GameState['cpuDifficulty'],
   }
 }
 
@@ -58,6 +62,8 @@ function serializeGame(state: GameState) {
     p2HandSize: state.p2HandSize,
     deck: JSON.stringify(state.deck),
     discard: JSON.stringify(state.discard),
+    p1Discard: JSON.stringify(state.p1Discard),
+    p2Discard: JSON.stringify(state.p2Discard),
     attackClaim: state.attackClaim ? JSON.stringify(state.attackClaim) : null,
     blockClaim: state.blockClaim ? JSON.stringify(state.blockClaim) : null,
     passedLast: state.passedLast || null,
@@ -67,6 +73,8 @@ function serializeGame(state: GameState) {
     lastTurnResult: state.lastTurnResult ? JSON.stringify(state.lastTurnResult) : null,
     turnAcks: JSON.stringify(state.turnAcks),
     lastAction: state.lastAction ? JSON.stringify(state.lastAction) : null,
+    cpuPlayer: state.cpuPlayer || null,
+    cpuDifficulty: state.cpuDifficulty || null,
   }
 }
 
@@ -86,10 +94,11 @@ export async function appendEvent(
   type: string,
   data?: Record<string, unknown>,
 ) {
-  const [{ count }] = await db
+  const result = await db
     .select({ count: sql<number>`count(*)` })
     .from(gameEvents)
     .where(eq(gameEvents.gameId, gameId))
+  const count = result[0]?.count ?? 0
   await db.insert(gameEvents).values({
     gameId,
     seq: count + 1,

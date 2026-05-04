@@ -72,6 +72,8 @@ export interface GameState {
   p2HandSize: number
   deck: string[]
   discard: string[]
+  p1Discard: string[]
+  p2Discard: string[]
   attackClaim: Claim | null
   blockClaim: Claim | null
   passedLast: Player | null
@@ -81,6 +83,8 @@ export interface GameState {
   lastTurnResult: TurnResult | null
   turnAcks: Player[]
   lastAction: LastAction | null
+  cpuPlayer: Player | null
+  cpuDifficulty: 'easy' | 'training' | 'medium' | 'hard' | null
 }
 
 export function getHand(state: GameState, player: Player): string[] {

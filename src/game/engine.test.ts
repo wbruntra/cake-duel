@@ -43,6 +43,8 @@ function baseState(overrides: Partial<GameState> = {}): GameState {
     p2HandSize: 4,
     deck: [],
     discard: [],
+    p1Discard: [],
+    p2Discard: [],
     attackClaim: null,
     blockClaim: null,
     passedLast: null,
@@ -51,6 +53,9 @@ function baseState(overrides: Partial<GameState> = {}): GameState {
     challengeAcks: [],
     lastTurnResult: null,
     turnAcks: [],
+    lastAction: null,
+    cpuPlayer: null,
+    cpuDifficulty: null,
     ...overrides,
   }
 }
@@ -82,6 +87,8 @@ describe('newBout', () => {
     const state = baseState()
     const result = newBout(state, 'p2')
     expect(result.turnPlayer).toBe('p2')
+    expect(result.p2Cakes).toBe(3)
+    expect(result.p1Cakes).toBe(4)
   })
 })
 
@@ -1044,8 +1051,8 @@ describe('full game flow', () => {
     expect(afterBout.currentBout).toBe(2)
     expect(afterBout.status).toBe('playing')
     expect(afterBout.turnPlayer).toBe('p2')
-    expect(afterBout.p1Cakes).toBe(3)
-    expect(afterBout.p2Cakes).toBe(4)
+    expect(afterBout.p1Cakes).toBe(4)
+    expect(afterBout.p2Cakes).toBe(3)
   })
 
   test('P1 reaches 3 bout wins → game over', () => {
@@ -1185,8 +1192,8 @@ describe('startNextBout', () => {
     const result = startNextBout(state)
 
     expect(result.currentBout).toBe(2)
-    expect(result.p1Cakes).toBe(3)
-    expect(result.p2Cakes).toBe(4)
+    expect(result.p1Cakes).toBe(4)
+    expect(result.p2Cakes).toBe(3)
     expect(result.p1Hand.length).toBe(4)
     expect(result.p2Hand.length).toBe(4)
     expect(result.turnPhase).toBe('attack')

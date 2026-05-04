@@ -61,9 +61,13 @@ export default function TurnResultOverlay() {
   const attackerLabel = iStoleCakes ? myName : oppName
   const defenderLabel = iStoleCakes ? oppName : myName
 
-  const totalAttack = (attackInfo?.cakes || 0) * attackClaim.count
-  const totalBlocks = blockClaim ? (blockInfo?.blocks || 0) * blockClaim.count : 0
-  const effective = Math.max(0, totalAttack - totalBlocks)
+  const cakePerAttacker = attackInfo?.cakes || 0
+  const totalAttack = cakePerAttacker * attackClaim.count
+  const totalBlockCakes = blockClaim
+    ? (blockInfo?.blocks || 0) * blockClaim.count * cakePerAttacker
+    : 0
+  const effective = Math.max(0, totalAttack - totalBlockCakes)
+  const attackersBlocked = blockClaim ? (blockInfo?.blocks || 0) * blockClaim.count : 0
 
   function doAck() {
     tap()
@@ -98,6 +102,7 @@ export default function TurnResultOverlay() {
             count={blockClaim.count}
             tone="block"
             delay={0.15}
+            attackerCakes={cakePerAttacker}
           />
         ) : (
           <motion.div
@@ -124,7 +129,7 @@ export default function TurnResultOverlay() {
           >
             <span className="text-attack text-2xl font-bold">{totalAttack}🍰</span>
             <span className="text-text">−</span>
-            <span className="text-block text-2xl font-bold">{totalBlocks}🛡️</span>
+            <span className="text-block text-2xl font-bold">{totalBlockCakes}🛡️</span>
             <span className="text-text">=</span>
             <motion.span
               key={effective}
@@ -242,9 +247,10 @@ export default function TurnResultOverlay() {
   )
 }
 
-function ClaimCard({ label, info, count, tone, delay }) {
+function ClaimCard({ label, info, count, tone, delay, attackerCakes }) {
   const toneClass =
     tone === 'attack' ? 'border-attack/60 bg-attack-light/40' : 'border-block/60 bg-block-light/40'
+  const blockCakes = info?.blocks != null ? info.blocks * count * (attackerCakes || 1) : null
   return (
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.92 }}
@@ -260,8 +266,8 @@ function ClaimCard({ label, info, count, tone, delay }) {
       {info?.cakes != null && (
         <span className="text-[10px] text-text">{info.cakes * count} 🍰 incoming</span>
       )}
-      {info?.blocks != null && (
-        <span className="text-[10px] text-text">{info.blocks * count} 🛡️ blocking</span>
+      {blockCakes != null && (
+        <span className="text-[10px] text-text">{blockCakes} 🍰 blocking</span>
       )}
     </motion.div>
   )
