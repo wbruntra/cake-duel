@@ -14,8 +14,8 @@ export default function PhaseToast() {
 
     if (state.turnPhase === 'challenge_result') {
       message = state.challengeResult?.iChallenged
-        ? 'You issued a challenge!'
-        : 'Opponent challenged!'
+        ? 'You called the bluff!'
+        : 'Opponent called the bluff!'
       isBoutEnd = false
     } else if (state.turnPhase === 'bout_end') {
       const boutWinner = state.boutWinners[state.currentBout - 1]

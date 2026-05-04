@@ -240,7 +240,7 @@ export async function wsMessage(ws: ServerWebSocket<WsData>, rawMessage: string 
       connections.get(msg.gameId)!.set(player, ws)
 
       send(ws, { type: 'state', state: stateForPlayer(state, player) })
-      return
+      broadcast(state)
     }
 
     const { gameId, player } = ws.data

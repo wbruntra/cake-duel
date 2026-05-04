@@ -1,6 +1,61 @@
+import { useState, useEffect } from 'react'
 import { useGame } from '@/context/GameContext'
 import { motion } from 'motion/react'
 import { tap } from '@/utils/haptics'
+import { getCardInfo, CARD_BACK_IMAGE } from '@/utils/cards'
+
+function FlipCard({ cardName, delay }) {
+  const [flipped, setFlipped] = useState(false)
+  const info = getCardInfo(cardName)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setFlipped(true), delay)
+    return () => clearTimeout(timer)
+  }, [delay])
+
+  return (
+    <div className="w-20 h-28" style={{ perspective: '600px' }}>
+      <motion.div
+        className="relative w-full h-full"
+        style={{ transformStyle: 'preserve-3d' }}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+      >
+        {/* Card Back */}
+        <div
+          className="absolute inset-0 rounded-lg overflow-hidden border-2 border-border bg-code-bg"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <img
+            src={CARD_BACK_IMAGE}
+            alt="Card back"
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+        </div>
+        {/* Card Front */}
+        <div
+          className="absolute inset-0 rounded-lg overflow-hidden border-2 border-border bg-bg flex flex-col"
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
+          {info.image ? (
+            <img
+              src={info.image}
+              alt={info.name}
+              className="w-full aspect-square object-cover rounded-t-md"
+              draggable={false}
+            />
+          ) : (
+            <span className="text-2xl mt-2">{info.emoji || '?'}</span>
+          )}
+          <span className="text-[9px] font-semibold text-text-h leading-tight truncate w-full text-center pt-0.5 px-0.5">
+            {info.name}
+          </span>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
 
 export default function ChallengeResultScreen() {
   const { state, send } = useGame()
@@ -36,7 +91,9 @@ export default function ChallengeResultScreen() {
         transition={{ duration: 0.35, delay: 0.05 }}
         className="flex flex-col items-center gap-4 w-full max-w-sm"
       >
-        <div className="text-xs uppercase tracking-widest text-text font-medium">Challenge!</div>
+        <div className="text-xs uppercase tracking-widest text-text font-medium">
+          Call the Bluff!
+        </div>
 
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -49,8 +106,8 @@ export default function ChallengeResultScreen() {
 
         <div className="flex flex-col items-center gap-1 mt-1">
           <span className="text-sm text-text">
-            {challengeResult.iChallenged ? 'You challenged' : `${oppName} challenged`} the{' '}
-            {targetLabel}
+            {challengeResult.iChallenged ? 'You called the bluff' : `${oppName} called the bluff`}{' '}
+            on the {targetLabel}
           </span>
           <div className="flex items-center gap-2 mt-1">
             <span className={`text-2xl font-bold ${truthfulColor}`}>{truthfulEmoji}</span>
@@ -59,13 +116,10 @@ export default function ChallengeResultScreen() {
         </div>
 
         <div className="mt-1 px-4 py-2 rounded-lg bg-code-bg border border-border">
-          <div className="text-xs text-text mb-1">Cards revealed:</div>
-          <div className="flex flex-wrap justify-center gap-1">
+          <div className="text-xs text-text mb-2">Cards revealed:</div>
+          <div className="flex flex-wrap justify-center gap-2">
             {challengeResult.revealedCardNames.map((name, i) => (
-              <span key={i} className="text-sm font-medium text-text-h">
-                {name}
-                {i < challengeResult.revealedCardNames.length - 1 ? ',' : ''}
-              </span>
+              <FlipCard key={i} cardName={name} delay={600 + i * 400} />
             ))}
           </div>
         </div>

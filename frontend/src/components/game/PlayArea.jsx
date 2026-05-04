@@ -50,7 +50,7 @@ export default function PlayArea() {
     attack: isMyTurn ? 'Your Attack' : `${oppName}'s Attack`,
     block: isMyTurn ? 'Your Block' : `${oppName}'s Block`,
     resolve: 'Resolving',
-    challenge_result: 'Challenge!',
+    challenge_result: 'Call the Bluff!',
   }
 
   const attackerCardInfo = state.attackClaim ? getCardInfo(state.attackClaim.cardName) : null

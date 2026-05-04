@@ -169,7 +169,7 @@ export default function ActionBar() {
               className="flex-1 h-14 text-base font-semibold rounded-lg border border-accent text-accent bg-transparent active:scale-95 transition-transform touch-manipulation"
               onClick={() => doChallenge('attack')}
             >
-              Challenge attack!
+              Call the bluff!
             </button>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function ActionBar() {
               className="flex-1 h-14 text-base font-semibold rounded-lg border border-accent text-accent bg-transparent active:scale-95 transition-transform touch-manipulation"
               onClick={() => doChallenge('block')}
             >
-              Challenge block!
+              Call the bluff!
             </button>
           </div>
         ) : (

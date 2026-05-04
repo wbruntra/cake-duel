@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import GameHeader from './GameHeader'
 import OpponentArea from './OpponentArea'
 import PlayArea from './PlayArea'
@@ -7,8 +8,43 @@ import ClaimPicker from './ClaimPicker'
 import PhaseToast from './PhaseToast'
 import { useGame } from '@/context/GameContext'
 
+const POLL_INTERVAL_MS = 4000
+
 export default function GameView() {
-  const { state, connected, error, onLeave } = useGame()
+  const { state, connected, error, send, onLeave } = useGame()
+  const [pollError, setPollError] = useState(null)
+
+  const isWaiting = state?.status === 'waiting'
+  const gameId = state?.id
+
+  useEffect(() => {
+    if (!isWaiting || !gameId) return
+
+    function getPlayerId() {
+      const hash = window.location.hash
+      const parts = hash.replace(/^#\/?/, '').split('/')
+      return parts[1] || null
+    }
+
+    const interval = setInterval(async () => {
+      const playerId = getPlayerId()
+      if (!playerId) return
+      try {
+        const res = await fetch(`/api/games/${gameId}?player=${encodeURIComponent(playerId)}`)
+        if (!res.ok) {
+          if (res.status === 404) setPollError('Game not found')
+          return
+        }
+        const freshState = await res.json()
+        if (freshState.status && freshState.status !== 'waiting') {
+          setPollError(null)
+          window.location.reload()
+        }
+      } catch {}
+    }, POLL_INTERVAL_MS)
+
+    return () => clearInterval(interval)
+  }, [isWaiting, gameId])
 
   if (error && !state) {
     return (
@@ -53,6 +89,8 @@ export default function GameView() {
         >
           Copy Link
         </button>
+        {!connected && <p className="text-xs text-danger">Disconnected — reconnecting…</p>}
+        {pollError && <p className="text-xs text-danger">{pollError}</p>}
         <button
           className="h-10 px-4 text-sm rounded-lg border border-border bg-bg text-danger active:scale-95 transition-transform touch-manipulation"
           onClick={onLeave}
