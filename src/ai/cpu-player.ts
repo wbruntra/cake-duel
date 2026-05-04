@@ -2,11 +2,10 @@ import type { GameState, Player } from '../game/types'
 import { opponent, getHand, getCakes } from '../game/types'
 import type { Move } from '../services/game'
 import type { Action, MCTSDifficulty } from './mcts/types'
-import { DIFFICULTY_CONFIGS } from './mcts/types'
-import { mctsSearch } from './mcts/search'
 import { getLegalActions, isMatchOver } from './mcts/simulator'
 import { createDeck } from '../game/cards'
-import { knowledgeExplain } from './mcts/knowledge'
+import { pickScoredAction, scoreAction } from './scoring'
+import { encodeAction } from './mcts/knowledge'
 
 const VERBOSE = !!Bun.env.CPU_VERBOSE
 
@@ -34,41 +33,54 @@ function claimIsImpossible(state: GameState, player: Player, cardId: string): bo
   return total > 0 && seen >= total
 }
 
-/**
- * Probability that a claim of `count` cards of type `cardId` is truthful,
- * based only on what this player has personally seen (own hand + own discard).
- *
- * Uses a hypergeometric model: given N_available cards of the claimed type
- * scattered among N_unknown unseen cards, what's the chance all `count`
- * played cards are the claimed type?
- */
-function pTruthfulForClaim(
+// C(n, k) — small values only (max deck size 20), so no overflow risk.
+function combinations(n: number, k: number): number {
+  if (k < 0 || k > n) return 0
+  if (k === 0 || k === n) return 1
+  k = Math.min(k, n - k)
+  let r = 1
+  for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1)
+  return r
+}
+
+function hypergeomPMF(N: number, K: number, n: number, k: number): number {
+  if (k < 0 || k > K || k > n || n - k > N - K) return 0
+  return (combinations(K, k) * combinations(N - K, n - k)) / combinations(N, n)
+}
+
+// P(claimer's hand contains ≥ `count` cards of `cardId`), from `observer`'s perspective.
+// Uses a hypergeometric model on the unknown pool (claimer's hand + their discard + deck).
+// This is a far better fit than P(random card = claimed type): it asks "can they have it?"
+// rather than "is any specific unknown card it?", giving naturally calibrated probabilities
+// (e.g. ~60% for a plausible Wizard claim vs ~19% with the old model).
+function pClaimerCanHave(
   state: GameState,
-  player: Player,
+  observer: Player,
   cardId: string,
   count: number,
 ): number {
-  const opp = opponent(player)
-  const available = (DECK_TOTALS[cardId] ?? 0) - seenCount(state, player, cardId)
+  const claimer = opponent(observer)
+  const available = (DECK_TOTALS[cardId] ?? 0) - seenCount(state, observer, cardId)
   if (available < count) return 0
 
-  const oppDiscardSize = (opp === 'p1' ? state.p1Discard : state.p2Discard).length
-  const nUnknown = getHand(state, opp).length + oppDiscardSize + state.deck.length
-  if (nUnknown <= 0) return 0
+  const claimerDiscard = (claimer === 'p1' ? state.p1Discard : state.p2Discard).length
+  const poolSize = getHand(state, claimer).length + claimerDiscard + state.deck.length
+  const handSize = getHand(state, claimer).length
+  if (poolSize <= 0 || handSize <= 0) return 0
 
-  // P(all `count` cards drawn from the unknown pool are the claimed type)
-  let p = 1
-  for (let i = 0; i < count; i++) {
-    p *= (available - i) / (nUnknown - i)
-  }
-  return Math.max(0, p)
+  // P(X ≥ count) where X ~ Hypergeometric(N=poolSize, K=available, n=handSize)
+  let pLess = 0
+  for (let k = 0; k < count; k++) pLess += hypergeomPMF(poolSize, available, handSize, k)
+  return Math.max(0, 1 - pLess)
 }
 
-// When P(truthful) = 0 → always challenge; when P(truthful) = THRESHOLD → never challenge.
-const STATISTICAL_CHALLENGE_THRESHOLD = 0.35
+// Challenge if P(claimer can have it) < threshold.
+// 0.40 is the game-theory break-even: challenge whenever P(claim is real) < 50%
+// but with a small margin of conservatism.
+const STATISTICAL_CHALLENGE_THRESHOLD = 0.4
 
-function statisticalChallengeProb(pTruthful: number): number {
-  return Math.max(0, 1 - pTruthful / STATISTICAL_CHALLENGE_THRESHOLD)
+function statisticalChallengeProb(pCanHave: number): number {
+  return Math.max(0, 1 - pCanHave / STATISTICAL_CHALLENGE_THRESHOLD)
 }
 
 export function deterministicAction(state: GameState, player: Player): Action | null {
@@ -96,10 +108,10 @@ export function deterministicAction(state: GameState, player: Player): Action | 
       return { type: 'challenge', target: 'attack' }
     }
 
-    const pTruth = pTruthfulForClaim(state, player, claimedId, count)
-    const challengeProb = statisticalChallengeProb(pTruth)
+    const pCanHave = pClaimerCanHave(state, player, claimedId, count)
+    const challengeProb = statisticalChallengeProb(pCanHave)
     vlog(
-      `  statistical: P(truthful)=${pTruth.toFixed(3)} → challenge with P=${challengeProb.toFixed(3)}`,
+      `  statistical: P(can have)=${pCanHave.toFixed(3)} → challenge with P=${challengeProb.toFixed(3)}`,
     )
     if (challengeProb > 0 && Math.random() < challengeProb) {
       vlog(`  STATISTICAL challenge: rolling ${challengeProb.toFixed(3)} → challenge`)
@@ -125,10 +137,10 @@ export function deterministicAction(state: GameState, player: Player): Action | 
         return { type: 'challenge', target: 'block' }
       }
 
-      const pTruth = pTruthfulForClaim(state, player, blockCardId, count)
-      const challengeProb = statisticalChallengeProb(pTruth)
+      const pCanHave = pClaimerCanHave(state, player, blockCardId, count)
+      const challengeProb = statisticalChallengeProb(pCanHave)
       vlog(
-        `  statistical block: P(truthful)=${pTruth.toFixed(3)} → challenge with P=${challengeProb.toFixed(3)}`,
+        `  statistical block: P(can have)=${pCanHave.toFixed(3)} → challenge with P=${challengeProb.toFixed(3)}`,
       )
       if (challengeProb > 0 && Math.random() < challengeProb) {
         vlog(`  STATISTICAL challenge block: rolling ${challengeProb.toFixed(3)} → challenge`)
@@ -139,7 +151,7 @@ export function deterministicAction(state: GameState, player: Player): Action | 
     return { type: 'resolve' }
   }
 
-  vlog(`no deterministic action → MCTS`)
+  vlog(`no deterministic action → scoring`)
   return null
 }
 
@@ -166,21 +178,18 @@ export function getCPUMove(
     return actionToMove(forced)
   }
 
+  const actions = getLegalActions(state, player)
+  const { action, scores } = pickScoredAction(state, player, actions, difficulty)
+
   if (VERBOSE) {
-    const actions = getLegalActions(state, player)
-    const lines = knowledgeExplain(state, player, actions as Action[])
-    for (const line of lines) vlog(line)
+    const sorted = [...scores].sort((a, b) => b.score - a.score)
+    for (const s of sorted.slice(0, 6)) {
+      vlog(`  score: ${encodeAction(s.action as Action).padEnd(28)} ${s.score.toFixed(2)}`)
+    }
+    vlog(`→ scored choice: ${encodeAction(action as Action)}`)
   }
 
-  const config = DIFFICULTY_CONFIGS[difficulty]
-  const result = mctsSearch(state, player, config)
-  const move = actionToMove(result.action)
-
-  vlog(
-    `→ MCTS chose: ${move.type}${(move as any).target ? ':' + (move as any).target : (move as any).claimedName ? ':' + (move as any).claimedName + 'x' + (move as any).cardIds?.length : ''} (winRate=${result.winRate.toFixed(3)} iters=${result.totalIterations} time=${result.timeMs}ms)`,
-  )
-
-  return move
+  return actionToMove(action)
 }
 
 function actionToMove(action: Action): Move {
