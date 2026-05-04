@@ -25,7 +25,10 @@ export default function PlayerArea() {
   return (
     <div className="px-3 py-2 flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <CakeDisplay count={state.myCakes} />
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-attack">{state.myName || 'You'}</span>
+          <CakeDisplay count={state.myCakes} />
+        </div>
         {canAct && selectedIndices.length > 0 && (
           <span className="text-xs text-text">
             {selectedIndices.length} card{selectedIndices.length !== 1 ? 's' : ''}

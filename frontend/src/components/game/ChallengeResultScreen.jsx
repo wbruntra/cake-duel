@@ -10,6 +10,9 @@ export default function ChallengeResultScreen() {
   const hasAcked = state.challengeAcks?.includes(state.player)
   const opponentAcked = state.challengeAcks?.includes(state.player === 'p1' ? 'p2' : 'p1')
 
+  const oppName = state.opponentName || 'Opponent'
+  const myName = state.myName || 'You'
+
   const targetLabel = challengeResult.target === 'attack' ? 'Attack' : 'Block'
   const truthfulLabel = challengeResult.claimWasTruthful ? 'Truthful!' : 'A Bluff!'
   const truthfulEmoji = challengeResult.claimWasTruthful ? '✓' : '✗'
@@ -41,12 +44,12 @@ export default function ChallengeResultScreen() {
           transition={{ duration: 0.4, delay: 0.2, type: 'spring', stiffness: 200 }}
           className={`text-4xl font-bold ${challengeResult.iWon ? 'text-attack' : 'text-danger'}`}
         >
-          {challengeResult.iWon ? 'You won!' : 'Opponent won!'}
+          {challengeResult.iWon ? 'You won!' : `${oppName} won!`}
         </motion.div>
 
         <div className="flex flex-col items-center gap-1 mt-1">
           <span className="text-sm text-text">
-            {challengeResult.iChallenged ? 'You challenged' : 'Opponent challenged'} the{' '}
+            {challengeResult.iChallenged ? 'You challenged' : `${oppName} challenged`} the{' '}
             {targetLabel}
           </span>
           <div className="flex items-center gap-2 mt-1">
@@ -72,7 +75,7 @@ export default function ChallengeResultScreen() {
           <span
             className={`font-semibold ${challengeResult.iWon ? 'text-attack' : 'text-danger'}`}
           >
-            {challengeResult.iWon ? 'you' : 'opponent'}
+            {challengeResult.iWon ? 'you' : oppName}
           </span>
         </div>
 
@@ -85,8 +88,8 @@ export default function ChallengeResultScreen() {
           </button>
         ) : (
           <div className="flex flex-col items-center gap-2 mt-2">
-            <span className="text-text text-base italic">Waiting for opponent…</span>
-            {opponentAcked && <span className="text-xs text-attack">Opponent ready</span>}
+            <span className="text-text text-base italic">Waiting for {oppName}…</span>
+            {opponentAcked && <span className="text-xs text-attack">{oppName} ready</span>}
           </div>
         )}
       </motion.div>

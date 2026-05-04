@@ -9,7 +9,12 @@ export default function OpponentArea() {
   return (
     <div className="px-3 py-2 border-b border-border">
       <div className="flex items-center justify-between mb-1">
-        <CakeDisplay count={state.opponentCakes} />
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-danger">
+            {state.opponentName || 'Opponent'}
+          </span>
+          <CakeDisplay count={state.opponentCakes} />
+        </div>
         <span className="text-xs text-text">
           {state.opponentHandCount} card{state.opponentHandCount !== 1 ? 's' : ''}
         </span>

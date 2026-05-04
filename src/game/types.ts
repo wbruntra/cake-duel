@@ -48,7 +48,9 @@ export interface GameState {
   id: string
   status: GameStatus
   player1Id: string
+  player1Name: string
   player2Id: string | null
+  player2Name: string | null
   currentBout: number
   boutWinners: (string | null)[]
   winner: string | null

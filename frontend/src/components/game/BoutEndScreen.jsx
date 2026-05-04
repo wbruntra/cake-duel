@@ -11,6 +11,8 @@ export default function BoutEndScreen() {
   const winner = boutWinners[currentBout - 1]
   const iWon = winner === state.player
 
+  const myName = state.myName || 'You'
+  const oppName = state.opponentName || 'Opponent'
   const p1Score = boutWinners.filter((w) => w === 'p1').length
   const p2Score = boutWinners.filter((w) => w === 'p2').length
   const myScore = state.player === 'p1' ? p1Score : p2Score
@@ -49,17 +51,17 @@ export default function BoutEndScreen() {
         className="flex flex-col items-center gap-5 w-full max-w-sm"
       >
         <div className={`text-3xl font-bold ${iWon ? 'text-attack' : 'text-danger'}`}>
-          {iWon ? `You won bout ${currentBout}` : `Opponent won bout ${currentBout}`}
+          {iWon ? `You won bout ${currentBout}` : `${oppName} won bout ${currentBout}`}
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-text uppercase tracking-wide">You</span>
+            <span className="text-xs text-text uppercase tracking-wide">{myName}</span>
             <span className="text-2xl font-bold text-attack">{myScore}</span>
           </div>
           <span className="text-text text-lg">–</span>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-text uppercase tracking-wide">Opponent</span>
+            <span className="text-xs text-text uppercase tracking-wide">{oppName}</span>
             <span className="text-2xl font-bold text-danger">{oppScore}</span>
           </div>
         </div>
@@ -86,8 +88,8 @@ export default function BoutEndScreen() {
           </button>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <span className="text-text text-base italic">Waiting for opponent…</span>
-            {opponentAcked && <span className="text-xs text-attack">Opponent ready</span>}
+            <span className="text-text text-base italic">Waiting for {oppName}…</span>
+            {opponentAcked && <span className="text-xs text-attack">{oppName} ready</span>}
           </div>
         )}
       </motion.div>

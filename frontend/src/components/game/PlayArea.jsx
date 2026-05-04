@@ -18,6 +18,8 @@ export default function PlayArea() {
   const { state } = useGame()
   if (!state) return null
 
+  const oppName = state.opponentName || 'Opponent'
+
   if (state.turnPhase === 'bout_end') {
     return <BoutEndScreen />
   }
@@ -37,7 +39,7 @@ export default function PlayArea() {
           Game Over!
         </div>
         <div className="text-2xl font-bold text-text-h">
-          {state.winner === state.player ? '🎉 You won the duel!' : 'Opponent won the duel.'}
+          {state.winner === state.player ? '🎉 You won the duel!' : `${oppName} won the duel.`}
         </div>
       </div>
     )
@@ -45,8 +47,8 @@ export default function PlayArea() {
 
   const isMyTurn = state.turnPlayer === state.player
   const phaseLabel = {
-    attack: isMyTurn ? 'Your Attack' : "Opponent's Attack",
-    block: isMyTurn ? 'Your Block' : "Opponent's Block",
+    attack: isMyTurn ? 'Your Attack' : `${oppName}'s Attack`,
+    block: isMyTurn ? 'Your Block' : `${oppName}'s Block`,
     resolve: 'Resolving',
     challenge_result: 'Challenge!',
   }
@@ -111,8 +113,8 @@ export default function PlayArea() {
       {isWaiting && (
         <div className="text-sm italic text-text">
           {state.turnPhase === 'attack'
-            ? 'Waiting for opponent to attack…'
-            : 'Waiting for opponent to block…'}
+            ? `Waiting for ${oppName} to attack…`
+            : `Waiting for ${oppName} to block…`}
         </div>
       )}
     </div>

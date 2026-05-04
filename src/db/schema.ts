@@ -6,7 +6,9 @@ export const games = sqliteTable('games', {
     .notNull()
     .default('waiting'),
   player1Id: text('player1_id').notNull(),
+  player1Name: text('player1_name').notNull().default('Player 1'),
   player2Id: text('player2_id'),
+  player2Name: text('player2_name'),
   currentBout: integer('current_bout').notNull().default(1),
   bout1Winner: text('bout1_winner'),
   bout2Winner: text('bout2_winner'),

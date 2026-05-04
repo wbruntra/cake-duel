@@ -56,8 +56,10 @@ export default function TurnResultOverlay() {
   const { attackClaim, blockClaim, cakesStolen, defenderCakes, boutOver, iStoleCakes } = result
   const attackInfo = getCardInfo(attackClaim.cardName)
   const blockInfo = blockClaim ? getCardInfo(blockClaim.cardName) : null
-  const attackerLabel = iStoleCakes ? 'You' : 'Opponent'
-  const defenderLabel = iStoleCakes ? 'Opponent' : 'You'
+  const myName = state.myName || 'You'
+  const oppName = state.opponentName || 'Opponent'
+  const attackerLabel = iStoleCakes ? myName : oppName
+  const defenderLabel = iStoleCakes ? oppName : myName
 
   const totalAttack = (attackInfo?.cakes || 0) * attackClaim.count
   const totalBlocks = blockClaim ? (blockInfo?.blocks || 0) * blockClaim.count : 0
@@ -193,7 +195,7 @@ export default function TurnResultOverlay() {
                   : `${cakesStolen} 🍰 lost`}
             </div>
             <div className="text-sm text-text">
-              {defenderLabel} {defenderLabel === 'You' ? 'have' : 'has'} {defenderCakes} 🍰 left
+              {defenderLabel} {defenderCakes} 🍰 left
             </div>
             {boutOver && (
               <motion.div
@@ -226,8 +228,8 @@ export default function TurnResultOverlay() {
               </button>
             ) : (
               <div className="flex flex-col items-center gap-1">
-                <span className="text-text text-base italic">Waiting for opponent…</span>
-                {opponentAcked && <span className="text-xs text-attack">Opponent ready</span>}
+                <span className="text-text text-base italic">Waiting for {oppName}…</span>
+                {opponentAcked && <span className="text-xs text-attack">{oppName} ready</span>}
               </div>
             )}
           </motion.div>

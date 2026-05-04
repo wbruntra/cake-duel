@@ -15,7 +15,9 @@ function parseGameRow(row: any): GameState {
     id: row.id,
     status: row.status,
     player1Id: row.player1Id,
+    player1Name: row.player1Name,
     player2Id: row.player2Id,
+    player2Name: row.player2Name,
     currentBout: row.currentBout,
     boutWinners: [row.bout1Winner, row.bout2Winner, row.bout3Winner],
     winner: row.winner,
@@ -44,7 +46,9 @@ function serializeGameState(state: GameState) {
   return {
     status: state.status,
     player1Id: state.player1Id,
+    player1Name: state.player1Name,
     player2Id: state.player2Id,
+    player2Name: state.player2Name,
     currentBout: state.currentBout,
     bout1Winner: state.boutWinners[0],
     bout2Winner: state.boutWinners[1],
@@ -74,14 +78,18 @@ function serializeGameState(state: GameState) {
 const app = new Hono()
 
 app.post('/api/games', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
   const playerId = generateId()
   const gameId = generateId()
+  const playerName = (body.name || '').trim().slice(0, 20) || 'Player 1'
 
   const gameState: GameState = {
     id: gameId,
     status: 'waiting',
     player1Id: playerId,
+    player1Name: playerName,
     player2Id: null,
+    player2Name: null,
     currentBout: 1,
     boutWinners: [null, null, null],
     winner: null,
@@ -116,6 +124,7 @@ app.post('/api/games', async (c) => {
 
 app.post('/api/games/:id/join', async (c) => {
   const gameId = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}))
 
   const rows = await db.select().from(games).where(eq(games.id, gameId))
   if (rows.length === 0) return c.json({ error: 'Game not found' }, 404)
@@ -124,10 +133,12 @@ app.post('/api/games/:id/join', async (c) => {
   if (row.status !== 'waiting') return c.json({ error: 'Game not joinable' }, 400)
 
   const playerId = generateId()
+  const playerName = (body.name || '').trim().slice(0, 20) || 'Player 2'
   const gameState = parseGameRow(row)
 
   const startedState = newBout(gameState, 'p1')
   startedState.player2Id = playerId
+  startedState.player2Name = playerName
 
   await db.update(games).set(serializeGameState(startedState)).where(eq(games.id, gameId))
 

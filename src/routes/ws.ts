@@ -126,7 +126,9 @@ function parseGame(row: GameRow): GameState {
     id: row.id,
     status: row.status as GameState['status'],
     player1Id: row.player1Id,
+    player1Name: row.player1Name,
     player2Id: row.player2Id,
+    player2Name: row.player2Name,
     currentBout: row.currentBout,
     boutWinners: [row.bout1Winner, row.bout2Winner, row.bout3Winner],
     winner: row.winner,
@@ -154,6 +156,10 @@ function parseGame(row: GameRow): GameState {
 function setGameFields(state: GameState) {
   return {
     status: state.status,
+    player1Id: state.player1Id,
+    player1Name: state.player1Name,
+    player2Id: state.player2Id,
+    player2Name: state.player2Name,
     currentBout: state.currentBout,
     bout1Winner: state.boutWinners[0],
     bout2Winner: state.boutWinners[1],

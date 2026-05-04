@@ -1,51 +1,56 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GameContext } from './context/GameContext'
 import { GameUIProvider } from './hooks/useGameUI'
 import { useWebSocket } from './hooks/useWebSocket'
 import Lobby from './components/lobby/Lobby'
 import GameView from './components/game/GameView'
 
-function getJoinParam() {
-  const params = new URLSearchParams(window.location.search)
-  return params.get('join')
+function parseHashRoute() {
+  const hash = window.location.hash
+  if (!hash || hash === '#' || hash === '#/') return {}
+  const path = hash.replace(/^#\/?/, '')
+  const parts = path.split('/')
+  if (parts.length === 1 && parts[0]) {
+    return { joinId: parts[0] }
+  }
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return { gameId: parts[0], playerId: parts[1] }
+  }
+  return {}
 }
 
-function useLocalStorage(key, initial) {
-  const [value, setValue] = useState(() => {
-    try {
-      const item = window.localStorage.getItem(key)
-      return item ? JSON.parse(item) : initial
-    } catch {
-      return initial
+function useHashRouter() {
+  const [route, setRoute] = useState(parseHashRoute)
+
+  useEffect(() => {
+    function onHashChange() {
+      setRoute(parseHashRoute())
     }
-  })
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
-  const set = (v) => {
-    setValue(v)
-    window.localStorage.setItem(key, JSON.stringify(v))
-  }
+  return route
+}
 
-  return [value, set]
+function navigateToGame(gameId, playerId) {
+  window.location.hash = `#/${gameId}/${playerId}`
+}
+
+function navigateToLobby() {
+  window.location.hash = ''
 }
 
 export default function App() {
-  const [gameId, setGameId] = useLocalStorage('cakeduel_gameId', null)
-  const [playerId, setPlayerId] = useLocalStorage('cakeduel_playerId', null)
-
+  const { gameId, playerId, joinId } = useHashRouter()
   const { state, connected, error, send } = useWebSocket(gameId, playerId)
 
-  function handleGameStart(gId, pId) {
-    setGameId(gId)
-    setPlayerId(pId)
+  if (!gameId || !playerId) {
+    return <Lobby joinId={joinId} onNavigateToGame={navigateToGame} />
   }
 
   function handleLeave() {
-    setGameId(null)
-    setPlayerId(null)
-  }
-
-  if (!gameId || !playerId) {
-    return <Lobby onGameStart={handleGameStart} initialJoinId={getJoinParam()} />
+    navigateToLobby()
   }
 
   return (

@@ -13,6 +13,9 @@ export default function GameHeader() {
   const playerScore = state.player === 'p1' ? p1Score : p2Score
   const oppScore = state.player === 'p1' ? p2Score : p1Score
 
+  const myName = state.myName || 'You'
+  const oppName = state.opponentName || 'Opponent'
+
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -22,7 +25,9 @@ export default function GameHeader() {
           <span className="text-text-h font-semibold">Bout {state.currentBout}</span>
         )}
         <span className="text-text">·</span>
-        <span className="text-attack font-semibold">You {playerScore}</span>
+        <span className="text-attack font-semibold">
+          {myName} {playerScore}
+        </span>
         <span className="text-text">–</span>
         <span className="text-danger font-semibold">{oppScore}</span>
         <span className="text-text">·</span>

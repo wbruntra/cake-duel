@@ -486,6 +486,8 @@ export function stateForPlayer(state: GameState, player: Player) {
         }
       : null,
     player,
+    myName: player === 'p1' ? state.player1Name : state.player2Name!,
+    opponentName: opp === 'p1' ? state.player1Name : state.player2Name,
   }
 }
 
