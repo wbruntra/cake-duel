@@ -105,8 +105,7 @@ export function actionKeyForStateAndAction(
 }
 
 import { readFileSync, existsSync, writeFileSync } from 'node:fs'
-
-// ... (rest of imports stay the same)
+import { pickHeuristicAction } from './heuristic'
 
 export function loadKnowledge(): void {
   if (loaded) return
@@ -170,7 +169,7 @@ export function knowledgeGuidedPick(state: GameState, player: Player, actions: A
 
   const minVisits = 5
   const hasData = scored.some((s) => s.stats.visits >= minVisits)
-  const epsilon = 0.2
+  const epsilon = 0.15
 
   if (hasData && Math.random() > epsilon) {
     let best = scored[0]!
@@ -184,6 +183,12 @@ export function knowledgeGuidedPick(state: GameState, player: Player, actions: A
     }
   }
 
+  // No knowledge for this situation yet — use the heuristic (85%) or explore
+  // randomly (15%) rather than exploring purely at random. This keeps training
+  // games realistic so the knowledge DB learns from human-like patterns.
+  if (Math.random() < 0.85) {
+    return pickHeuristicAction(state, player, actions)
+  }
   return actions[Math.floor(Math.random() * actions.length)]!
 }
 

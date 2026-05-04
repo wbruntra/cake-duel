@@ -1,10 +1,20 @@
 /**
- * Replication script: simulates a human (p1) playing truthfully against CPU (p2, medium)
+ * Replication script: simulates a human (p1) playing against CPU (p2, medium)
  * to observe what moves the CPU selects — especially how often it challenges.
  *
- * Usage: bun run scripts/test-cpu-behavior.ts [--seed 123] [--games 10] [--verbose]
+ * Usage: bun run scripts/test-cpu-behavior.ts [--seed=123] [--games=10] [--verbose]
+ *        [--bluff-mode=always|never|alternate]
  *
  * Set CPU_VERBOSE=1 to see CPU decision logs.
+ *
+ * --bluff-mode controls human attack behavior:
+ *   always    – human always bluffs (plays a non-matching card under a false name)
+ *   never     – human always attacks truthfully (default)
+ *   alternate – human alternates bluff/truthful each attack
+ *
+ * KEY DIAGNOSTIC: The script logs attackClaim.playedCardIds at the moment the CPU
+ * must decide whether to challenge. If the CPU can see those IDs, it has perfect
+ * knowledge of whether the attack is a bluff — that's the information leak.
  */
 
 import {
@@ -30,12 +40,19 @@ import { loadKnowledge, getKnowledgeStats } from '../src/ai/mcts/knowledge'
 const VERBOSE = Bun.argv.includes('--verbose')
 if (VERBOSE) Bun.env.CPU_VERBOSE = '1'
 
+const bluffModeArg = Bun.argv.find((a) => a.startsWith('--bluff-mode='))?.split('=')[1] ?? 'never'
+type BluffMode = 'always' | 'never' | 'alternate'
+const BLUFF_MODE: BluffMode = (bluffModeArg as BluffMode) || 'never'
+
 type CPUMoveLog = {
   bout: number
   turn: number
   phase: string
   cpuHandSummary: string
   humanAction: string
+  humanAttackWasBluff: boolean | null
+  /** The actual card IDs the CPU can read from attackClaim.playedCardIds at decision time */
+  attackClaimPlayedCardIds: string[] | null
   cpuAction: string
   cpuHandAfter: string | null
   result: string
@@ -46,6 +63,11 @@ let stats = {
   challenges: 0,
   challengeWon: 0,
   challengeLost: 0,
+  // Broken down by whether the human attack was a bluff
+  challengesOnBluff: 0,
+  challengesOnTruth: 0,
+  bluffAttacks: 0,
+  truthfulAttacks: 0,
   blocks: 0,
   skipBlocks: 0,
   passes: 0,
@@ -62,6 +84,10 @@ function resetStats() {
     challenges: 0,
     challengeWon: 0,
     challengeLost: 0,
+    challengesOnBluff: 0,
+    challengesOnTruth: 0,
+    bluffAttacks: 0,
+    truthfulAttacks: 0,
     blocks: 0,
     skipBlocks: 0,
     passes: 0,
@@ -111,23 +137,57 @@ function actionSummary(move: any): string {
   }
 }
 
-/** Human player (p1) makes a normal, truthful attack using a random attacker card from hand */
-function humanAttack(state: GameState): ReturnType<typeof playAttack> {
-  const hand = getHand(state, 'p1')
+// Tracks alternating bluff/truthful for 'alternate' mode
+let nextHumanAttackIsBluff = true
 
-  // Find the best attacker card in hand
+/**
+ * Human player (p1) attacks according to BLUFF_MODE.
+ *
+ * Returns: { result, wasBluff }
+ * wasBluff indicates whether the attack was a bluff (card played ≠ claimed name).
+ */
+function humanAttack(state: GameState): {
+  result: ReturnType<typeof playAttack>
+  wasBluff: boolean
+} {
+  const hand = getHand(state, 'p1')
   const attackers = ['wizard', 'archer', 'soldier']
+  const nonAttackers = hand.filter((id) => !attackers.includes(id))
+
+  const wantsBluff =
+    BLUFF_MODE === 'always' || (BLUFF_MODE === 'alternate' && nextHumanAttackIsBluff)
+
+  if (BLUFF_MODE === 'alternate') {
+    nextHumanAttackIsBluff = !nextHumanAttackIsBluff
+  }
+
+  // Try a bluff: play a non-attacker card but claim it's an attacker
+  if (wantsBluff && nonAttackers.length > 0) {
+    // Pick a claimable non-attacker card and claim it as 'Soldier'
+    const bluffCard = nonAttackers[0]!
+    const card = getCardById(bluffCard)
+    if (card && !card.isUnclaimable) {
+      return {
+        result: playAttack(state, 'p1', [bluffCard], 'Soldier'),
+        wasBluff: true,
+      }
+    }
+  }
+
+  // Try a truthful attack
   for (const atk of attackers) {
     const idx = hand.indexOf(atk)
     if (idx !== -1) {
       const card = getCardById(atk)!
-      return playAttack(state, 'p1', [hand[idx]!], card.name)
+      return {
+        result: playAttack(state, 'p1', [hand[idx]!], card.name),
+        wasBluff: false,
+      }
     }
   }
 
-  // If we have no real attackers, just play the first claimable card as a bluff (truthful with wrong name)
-  // or pass
-  return pass(state, 'p1')
+  // Nothing useful; pass
+  return { result: pass(state, 'p1'), wasBluff: false }
 }
 
 /** Simulate playing one bout. Returns the bout winner. */
@@ -136,26 +196,30 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
   let turn = 0
   const maxTurns = 40
 
+  // Track whether the pending human attack (not yet resolved by CPU) was a bluff
+  let pendingHumanAttackWasBluff: boolean | null = null
+
   while (turn < maxTurns) {
     turn++
 
     // Handle non-action phases automatically
     if (state.turnPhase === 'turn_resolution') {
-      // Auto-ack for both
       const attacker = state.lastTurnResult!.attackClaim.player
       if (state.lastTurnResult?.boutOver) {
         const boutWinner: Player =
           state.lastTurnResult.cakesStolen > 0 ? attacker : opponent(attacker)
         state = finishBout(state, boutWinner)
+        pendingHumanAttackWasBluff = null
         continue
       }
       state = resupply(state)
+      pendingHumanAttackWasBluff = null
       continue
     }
 
     if (state.turnPhase === 'challenge_result') {
-      // Auto-ack for both
       state = finishBout(state, state.challengeResult!.boutWinner)
+      pendingHumanAttackWasBluff = null
       continue
     }
 
@@ -178,9 +242,8 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
     const currentPlayer = state.turnPlayer!
 
     if (currentPlayer === 'p1') {
-      // Human's turn: always attack truthfully
       if (phase === 'attack') {
-        const result = humanAttack(state)
+        const { result, wasBluff } = humanAttack(state)
         if ('error' in result) {
           log.push({
             bout: state.currentBout,
@@ -188,15 +251,19 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
             phase,
             cpuHandSummary: summarizeHand(getHand(state, 'p2')),
             humanAction: `ERROR: ${result.error}`,
+            humanAttackWasBluff: null,
+            attackClaimPlayedCardIds: null,
             cpuAction: '-',
             cpuHandAfter: null,
             result: 'human error',
           })
           return null
         }
+        pendingHumanAttackWasBluff = wasBluff
+        if (wasBluff) stats.bluffAttacks++
+        else stats.truthfulAttacks++
         state = result.state
       } else if (phase === 'block') {
-        // Human blocks with real blocker if available, otherwise skip
         const hand = getHand(state, 'p1')
         const attackCard = state.attackClaim!
         const blockerId = attackCard.cardName === 'Wizard' ? 'scientist' : 'defender'
@@ -207,7 +274,6 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
           state = skipBlock(state, 'p1').state
         }
       } else if (phase === 'resolve') {
-        // Human is attacker here — just resolve (no challenge)
         const { state: resolved, turnResult } = resolveTurn(state)
         state = toTurnResolution(resolved, turnResult)
       }
@@ -215,6 +281,9 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
       // CPU's turn (p2)
       const cpuHandBefore = [...getHand(state, 'p2')]
       const cpuHandSummary = summarizeHand(cpuHandBefore)
+
+      // DIAGNOSTIC: capture what the CPU can read from attackClaim.playedCardIds right now
+      const visiblePlayedCardIds = state.attackClaim?.playedCardIds ?? null
 
       const move = getCPUMove(state, 'p2', 'medium')
       stats.totalMoves++
@@ -256,16 +325,23 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
             state = passResult.state
             if (passResult.doublePass) {
               resultStr = 'double-pass, bout ends'
-              // resolve the bout
-              const current = state
-              state = { ...current }
-              continue // the above needs to finish bout — handle in loop
+              continue
             }
           }
           break
 
         case 'challenge':
           stats.challenges++
+          // Only attribute bluff/truth stats when CPU challenges a human ATTACK
+          // (block phase, attacker = p1). Resolve-phase block challenges are separate.
+          if (
+            phase === 'block' &&
+            state.attackClaim?.player === 'p1' &&
+            pendingHumanAttackWasBluff !== null
+          ) {
+            if (pendingHumanAttackWasBluff) stats.challengesOnBluff++
+            else stats.challengesOnTruth++
+          }
           const chalResult = resolveChallenge(state, 'p2', move.target)
           if ('error' in chalResult) {
             resultStr = `ERROR: ${chalResult.error}`
@@ -276,7 +352,6 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
             if (won) stats.challengeWon++
             else stats.challengeLost++
             state = toChallengeResult(chalResult.state, cr)
-            // bout will finish in the auto-ack phase
           }
           break
 
@@ -287,31 +362,36 @@ function simulateBout(initialState: GameState, log: CPUMoveLog[]): Player | null
           break
 
         case 'turnAck':
-          state = { ...state } // ack handled automatically above
+          state = { ...state }
           break
 
         default:
           resultStr = `UNKNOWN: ${(move as any).type}`
       }
 
-      log.push({
-        bout: state.currentBout,
-        turn,
-        phase,
-        cpuHandSummary,
-        humanAction:
-          phase === 'block'
-            ? `defending vs ${state.attackClaim?.cardName}x${state.attackClaim?.count}`
-            : `human turn in ${phase}`,
-        cpuAction: moveStr,
-        cpuHandAfter,
-        result: resultStr,
-      })
+      // Only log CPU block/challenge decisions (the interesting ones)
+      if (phase === 'block' || phase === 'resolve') {
+        log.push({
+          bout: state.currentBout,
+          turn,
+          phase,
+          cpuHandSummary,
+          humanAction:
+            phase === 'block'
+              ? `defending vs ${state.attackClaim?.cardName ?? '?'}x${state.attackClaim?.count ?? 0} (humanBluff=${pendingHumanAttackWasBluff})`
+              : `human turn in ${phase}`,
+          humanAttackWasBluff: pendingHumanAttackWasBluff,
+          attackClaimPlayedCardIds: visiblePlayedCardIds,
+          cpuAction: moveStr,
+          cpuHandAfter,
+          result: resultStr,
+        })
+      }
     }
 
-    // Check if bout is over after challenge
     if (state.turnPhase === 'challenge_result') {
       state = finishBout(state, state.challengeResult!.boutWinner)
+      pendingHumanAttackWasBluff = null
     }
 
     if (state.status === 'finished' || state.turnPhase === 'game_over') {
@@ -333,37 +413,42 @@ const numGames = parseInt(args.find((a) => a.startsWith('--games='))?.split('=')
 const seedArg = args.find((a) => a.startsWith('--seed='))
 const seed = seedArg ? parseInt(seedArg.split('=')[1]!) : Date.now()
 
-console.log(`Seed: ${seed} | Games: ${numGames}`)
+console.log(`Seed: ${seed} | Games: ${numGames} | BluffMode: ${BLUFF_MODE}`)
+console.log('='.repeat(60))
+console.log('NOTE: attackClaim.playedCardIds shows actual card IDs the CPU can read.')
+console.log('      If CPU challenges 100% of bluffs and 0% of truths, info is leaking.')
 console.log('='.repeat(60))
 
-// We use a counter to seed each bout so deterministic per-game
 let gameCounter = seed
-
-// Load knowledge so we can report stats
 loadKnowledge()
 const kStats = getKnowledgeStats()
 console.log(`Knowledge DB: ${kStats.situations} situations, ${kStats.entries} entries`)
 
 const allLogs: CPUMoveLog[][] = []
 
-// We need Bun SRand-like functionality. We'll just use Math.random with our seed.
-// For a simple seed, we'll pre-warm with a simple LCG.
 let rng = seed
 function seededRandom(): number {
-  // Simple xorshift
   rng ^= rng << 13
   rng ^= rng >> 17
   rng ^= rng << 5
   return (rng >>> 0) / 4294967296
 }
-// Override Math.random for reproducibility within our simulation
 const origRandom = Math.random
 Math.random = seededRandom
+
+// Totals across all games
+let grandChallenges = 0
+let grandChallengeWon = 0
+let grandChallengesOnBluff = 0
+let grandChallengesOnTruth = 0
+let grandBluffAttacks = 0
+let grandTruthAttacks = 0
 
 try {
   for (let g = 0; g < numGames; g++) {
     const log: CPUMoveLog[] = []
     resetStats()
+    nextHumanAttackIsBluff = true
 
     const gameState: GameState = {
       id: `test-${g}`,
@@ -405,17 +490,35 @@ try {
 
     allLogs.push(log)
 
+    grandChallenges += stats.challenges
+    grandChallengeWon += stats.challengeWon
+    grandChallengesOnBluff += stats.challengesOnBluff
+    grandChallengesOnTruth += stats.challengesOnTruth
+    grandBluffAttacks += stats.bluffAttacks
+    grandTruthAttacks += stats.truthfulAttacks
+
     console.log(`\nGame ${g + 1}: Winner=${winner === 'p1' ? 'Human' : 'CPU'}`)
+    console.log(`  Attacks: human bluff=${stats.bluffAttacks} truthful=${stats.truthfulAttacks}`)
     console.log(
-      `  Moves: ${stats.totalMoves} | Challenges: ${stats.challenges} (won=${stats.challengeWon} lost=${stats.challengeLost}) | ` +
-        `Blocks: ${stats.blocks} | SkipBlocks: ${stats.skipBlocks} | Passes: ${stats.passes} | Attacks: ${stats.attacks}`,
+      `  Challenges: total=${stats.challenges} (onBluff=${stats.challengesOnBluff} onTruth=${stats.challengesOnTruth}) won=${stats.challengeWon} lost=${stats.challengeLost}`,
     )
 
-    // Show challenge details
+    // Show each CPU block/challenge decision with the diagnostic info
     for (const entry of log) {
-      if (entry.cpuAction.startsWith('CHALLENGE')) {
+      if (entry.phase !== 'block') continue
+      const isChallenge = entry.cpuAction.startsWith('CHALLENGE')
+      const bluffStr =
+        entry.humanAttackWasBluff === true
+          ? '[BLUFF]'
+          : entry.humanAttackWasBluff === false
+            ? '[TRUTH]'
+            : '[?]'
+      const leakStr = entry.attackClaimPlayedCardIds
+        ? `claimIds=${entry.attackClaimPlayedCardIds.join(',')}`
+        : 'claimIds=null'
+      if (VERBOSE || isChallenge || BLUFF_MODE !== 'never') {
         console.log(
-          `  ⚡ ${entry.cpuAction} | CPU hand: ${entry.cpuHandSummary} | ${entry.result}`,
+          `  ${bluffStr} CPU sees: ${leakStr} | human: ${entry.humanAction} → CPU: ${entry.cpuAction} | ${entry.result}`,
         )
       }
     }
@@ -428,35 +531,51 @@ try {
 
 console.log('\n' + '='.repeat(60))
 console.log('SUMMARY')
+console.log(`Games: ${numGames} | BluffMode: ${BLUFF_MODE}`)
+console.log(`Human attacks: bluff=${grandBluffAttacks} truthful=${grandTruthAttacks}`)
+console.log(`Total CPU challenges: ${grandChallenges}`)
 
-let totalChallenges = 0
-let totalChallengeWon = 0
-let totalMoves = 0
-let totalCPUWins = 0
-
-for (const log of allLogs) {
-  for (const entry of log) {
-    if (entry.cpuAction.startsWith('CHALLENGE')) {
-      totalChallenges++
-      if (entry.result.includes('CPU WON')) totalChallengeWon++
-    }
-    if (
-      entry.cpuAction !== '-' &&
-      entry.cpuAction !== 'turnAck' &&
-      entry.cpuAction !== 'boutAck' &&
-      entry.cpuAction !== 'challengeAck'
-    ) {
-      totalMoves++
-    }
-  }
+if (grandBluffAttacks > 0) {
+  const bluffChallengeRate = ((grandChallengesOnBluff / grandBluffAttacks) * 100).toFixed(1)
+  console.log(
+    `  Challenges on BLUFF attacks: ${grandChallengesOnBluff}/${grandBluffAttacks} = ${bluffChallengeRate}%`,
+  )
+}
+if (grandTruthAttacks > 0) {
+  const truthChallengeRate = ((grandChallengesOnTruth / grandTruthAttacks) * 100).toFixed(1)
+  console.log(
+    `  Challenges on TRUTHFUL attacks: ${grandChallengesOnTruth}/${grandTruthAttacks} = ${truthChallengeRate}%`,
+  )
 }
 
-console.log(`Games played: ${numGames}`)
-console.log(`Total CPU action moves: ${totalMoves}`)
 console.log(
-  `Total challenges: ${totalChallenges} (${totalMoves > 0 ? ((totalChallenges / totalMoves) * 100).toFixed(1) : 0}% of moves)`,
+  `Challenge win rate: ${grandChallengeWon}/${grandChallenges} = ${grandChallenges > 0 ? ((grandChallengeWon / grandChallenges) * 100).toFixed(1) : 0}%`,
 )
-console.log(
-  `Challenges won: ${totalChallengeWon} (${totalChallenges > 0 ? ((totalChallengeWon / totalChallenges) * 100).toFixed(1) : 0}%)`,
-)
-console.log(`Challenges lost: ${totalChallenges - totalChallengeWon}`)
+
+const bluffChallengeRate =
+  grandBluffAttacks > 0 ? ((grandChallengesOnBluff / grandBluffAttacks) * 100).toFixed(1) : 'N/A'
+const truthChallengeRate =
+  grandTruthAttacks > 0 ? ((grandChallengesOnTruth / grandTruthAttacks) * 100).toFixed(1) : 'N/A'
+
+if (grandBluffAttacks > 0 && grandTruthAttacks > 0) {
+  const diff = Math.abs(
+    grandChallengesOnBluff / grandBluffAttacks - grandChallengesOnTruth / grandTruthAttacks,
+  )
+  if (diff < 0.1) {
+    console.log(
+      'DIAGNOSIS: CPU challenges bluffs and truths at similar rates — no information leak detected.',
+    )
+  } else if (
+    grandChallengesOnBluff / grandBluffAttacks >
+    grandChallengesOnTruth / grandTruthAttacks + 0.3
+  ) {
+    console.log(
+      'DIAGNOSIS: CPU challenges bluffs significantly more than truths — possible information leak!',
+    )
+    console.log('  Check if attackClaim.playedCardIds is being read by the MCTS.')
+  } else {
+    console.log(
+      'DIAGNOSIS: Challenge rates differ somewhat — may reflect statistical reasoning, not leakage.',
+    )
+  }
+}

@@ -18,6 +18,13 @@ import {
 import { getCardByName, getCardById, createDeck } from '../../game/cards'
 import type { Action } from './types'
 
+// Public knowledge: how many copies of each card exist in a full deck.
+// Claiming more than this is always detectable as a bluff and never worth trying.
+const DECK_TOTALS: Record<string, number> = {}
+for (const id of createDeck()) {
+  DECK_TOTALS[id] = (DECK_TOTALS[id] ?? 0) + 1
+}
+
 function subsets(arr: string[], minSize: number, maxSize: number): string[][] {
   const results: string[][] = []
   const n = arr.length
@@ -63,10 +70,21 @@ export function getLegalActions(state: GameState, player: Player): Action[] {
     const validSubsets = subsets(claimable, 1, claimable.length)
     for (const cardIds of validSubsets) {
       for (const claimedName of ATTACKER_NAMES) {
+        const claimedId = claimedName.toLowerCase()
+
         const truthful = cardIds.every((id) => {
           const card = getCardById(id)
           return card && card.name.toLowerCase() === claimedName.toLowerCase()
         })
+
+        // Bluffs are only realistic with a single card — real players bluff by
+        // playing one card and naming a different type. Multi-card bluffs are
+        // easy to detect and almost never correct, so exclude them entirely.
+        if (!truthful && cardIds.length > 1) continue
+
+        // Skip claims that exceed the total copies in the deck — always detectable.
+        if (cardIds.length > (DECK_TOTALS[claimedId] ?? 0)) continue
+
         actions.push({ type: 'attack', cardIds, claimedName, truthful })
       }
     }
@@ -75,7 +93,8 @@ export function getLegalActions(state: GameState, player: Player): Action[] {
 
     if (!state.attackClaim) return [{ type: 'skipBlock' }]
 
-    actions.push({ type: 'challenge', target: 'attack' })
+    // Challenge is handled exclusively by deterministicAction via statistical
+    // inference — not included here so MCTS never picks it based on biased data.
 
     const attackCard = getCardByName(state.attackClaim.cardName)
     if (!attackCard) return [{ type: 'skipBlock' }]
@@ -89,10 +108,7 @@ export function getLegalActions(state: GameState, player: Player): Action[] {
     }
   } else if (phase === 'resolve') {
     actions.push({ type: 'resolve' })
-    const isAttacker = state.attackClaim?.player === player
-    if (isAttacker && state.blockClaim) {
-      actions.push({ type: 'challenge', target: 'block' })
-    }
+    // Challenge of block also handled exclusively by deterministicAction.
   }
 
   return actions
