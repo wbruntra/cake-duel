@@ -1,4 +1,5 @@
 import type { GameState, Player } from '../game/types'
+import { OPENROUTER_API_KEY } from '~/secrets.js'
 
 const SYSTEM_PROMPT = `You are a strategic player in Cake Duel, a card bluffing game. Given the current game state, choose the optimal move.
 
@@ -165,8 +166,8 @@ export async function getAIMove(
   state: GameState,
   player: Player,
 ): Promise<Record<string, unknown>> {
-  const apiKey = Bun.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('OPENAI_API_KEY not configured')
+  const apiKey = OPENROUTER_API_KEY
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured')
 
   const userMessage = formatGameState(state, player)
 
@@ -183,7 +184,7 @@ export async function getAIMove(
         { role: 'user', content: userMessage },
       ],
       response_format: { type: 'json_object' },
-      max_tokens: 200,
+      max_tokens: 8000,
     }),
   })
 
