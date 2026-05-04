@@ -5,65 +5,28 @@ import ChallengeResultScreen from './ChallengeResultScreen'
 import TurnResultOverlay from './TurnResultOverlay'
 import { getCardInfo } from '@/utils/cards'
 import { motion } from 'motion/react'
-import { useState, useEffect, useRef } from 'react'
 
-function useLastEvent(state) {
-  const [lastEvent, setLastEvent] = useState(null)
-  const prevPhaseRef = useRef(null)
-  const prevPassedLastRef = useRef(null)
-  const capturedResultRef = useRef(null)
-
-  useEffect(() => {
-    if (!state) return
-
-    const prevPhase = prevPhaseRef.current
-    const prevPassedLast = prevPassedLastRef.current
-
-    // Capture the result while it's still available (during turn_resolution)
-    if (state.lastTurnResult) {
-      capturedResultRef.current = state.lastTurnResult
-    }
-
-    // Someone passed
-    if (state.passedLast !== prevPassedLast && state.passedLast !== null) {
-      const isMe = state.passedLast === state.player
-      setLastEvent({ type: 'pass', isMe })
-    }
-
-    // Turn resolution just finished → back to attack phase
-    if (prevPhase === 'turn_resolution' && state.turnPhase === 'attack') {
-      const r = capturedResultRef.current
-      if (r) setLastEvent({ type: 'attack', result: r, player: state.player })
-    }
-
-    prevPhaseRef.current = state.turnPhase
-    prevPassedLastRef.current = state.passedLast
-  }, [state?.turnPhase, state?.passedLast])
-
-  return lastEvent
-}
-
-function LastEventBar({ event, state }) {
-  if (!event) return null
+function LastActionBar({ state }) {
+  const action = state.lastAction
+  if (!action) return null
 
   const myName = state.myName || 'You'
   const oppName = state.opponentName || 'Opponent'
+  const iAm = (player) => player === state.player
 
   let text = null
 
-  if (event.type === 'pass') {
-    text = event.isMe ? 'You passed' : `${oppName} passed`
-  } else if (event.type === 'attack') {
-    const { result, player } = event
-    const { attackClaim, blockClaim, cakesStolen } = result
-    const iAttacked = attackClaim.player === player
-    const attackerLabel = iAttacked ? myName : oppName
+  if (action.type === 'pass') {
+    text = iAm(action.player) ? 'You passed' : `${oppName} passed`
+  } else if (action.type === 'attack') {
+    const { attackClaim, blockClaim, cakesStolen } = action
+    const attackerLabel = iAm(attackClaim.player) ? myName : oppName
     const cardInfo = getCardInfo(attackClaim.cardName)
     const emoji = cardInfo?.emoji ?? ''
 
     let outcome
     if (cakesStolen > 0) {
-      outcome = iAttacked ? `+${cakesStolen}🍰 stolen` : `${cakesStolen}🍰 lost`
+      outcome = iAm(attackClaim.player) ? `+${cakesStolen}🍰 stolen` : `${cakesStolen}🍰 lost`
     } else if (blockClaim) {
       outcome = 'blocked'
     } else {
@@ -98,7 +61,6 @@ const PHASE_STYLES = {
 
 export default function PlayArea() {
   const { state } = useGame()
-  const lastEvent = useLastEvent(state)
   if (!state) return null
 
   const oppName = state.opponentName || 'Opponent'
@@ -143,7 +105,7 @@ export default function PlayArea() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-4 px-4 min-h-0 relative">
-      <LastEventBar event={lastEvent} state={state} />
+      <LastActionBar state={state} />
       <motion.div
         key={state.turnPhase}
         initial={{ opacity: 0, scale: 0.9 }}

@@ -1,5 +1,15 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 
+export const gameEvents = sqliteTable('game_events', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  gameId: text('game_id').notNull(),
+  seq: integer('seq').notNull(),
+  type: text('type').notNull(),
+  player: text('player'),
+  data: text('data'),
+  createdAt: text('created_at').notNull(),
+})
+
 export const games = sqliteTable('games', {
   id: text('id').primaryKey(),
   status: text('status', { enum: ['waiting', 'playing', 'finished'] })
@@ -46,5 +56,6 @@ export const games = sqliteTable('games', {
   challengeAcks: text('challenge_acks').notNull().default('[]'),
   lastTurnResult: text('last_turn_result'),
   turnAcks: text('turn_acks').notNull().default('[]'),
+  lastAction: text('last_action'),
   createdAt: text('created_at').notNull(),
 })

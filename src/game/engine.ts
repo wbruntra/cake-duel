@@ -1,4 +1,4 @@
-import type { GameState, Player, Claim, ChallengeResult, TurnResult } from './types'
+import type { GameState, Player, Claim, ChallengeResult, TurnResult, LastAction } from './types'
 import { opponent, getCakes, getHand } from './types'
 import { getCardByName, getCardById, createDeck, getAttackerTypes } from './cards'
 
@@ -54,6 +54,7 @@ export function newBout(state: GameState, startingPlayer: Player): GameState {
     challengeAcks: [],
     boutEndAcks: [],
     turnAcks: [],
+    lastAction: null,
   }
 }
 
@@ -172,6 +173,7 @@ export function pass(
       turnPlayer: opponent(player),
       turnPhase: 'attack',
       lastTurnResult: null,
+      lastAction: { type: 'pass', player },
     },
     doublePass,
   }
@@ -235,11 +237,19 @@ export function resolveTurn(state: GameState): {
 }
 
 export function toTurnResolution(state: GameState, turnResult: TurnResult): GameState {
+  const lastAction: LastAction = {
+    type: 'attack',
+    player: turnResult.attackClaim.player,
+    attackClaim: turnResult.attackClaim,
+    blockClaim: turnResult.blockClaim,
+    cakesStolen: turnResult.cakesStolen,
+  }
   return {
     ...state,
     turnPhase: 'turn_resolution',
     lastTurnResult: turnResult,
     turnAcks: [],
+    lastAction,
   }
 }
 
@@ -488,6 +498,7 @@ export function stateForPlayer(state: GameState, player: Player) {
     player,
     myName: player === 'p1' ? state.player1Name : state.player2Name!,
     opponentName: opp === 'p1' ? state.player1Name : state.player2Name,
+    lastAction: state.lastAction ?? null,
   }
 }
 

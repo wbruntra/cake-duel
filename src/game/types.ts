@@ -44,6 +44,14 @@ export interface TurnResult {
   boutOver: boolean
 }
 
+export interface LastAction {
+  type: 'pass' | 'attack'
+  player: Player
+  attackClaim?: Claim
+  blockClaim?: Claim | null
+  cakesStolen?: number
+}
+
 export interface GameState {
   id: string
   status: GameStatus
@@ -72,6 +80,7 @@ export interface GameState {
   challengeAcks: Player[]
   lastTurnResult: TurnResult | null
   turnAcks: Player[]
+  lastAction: LastAction | null
 }
 
 export function getHand(state: GameState, player: Player): string[] {
