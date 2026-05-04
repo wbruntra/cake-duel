@@ -40,7 +40,7 @@ const BOUT_ACK_TIMEOUT_MS = 30000
 const CHALLENGE_ACK_TIMEOUT_MS = 15000
 const TURN_RESOLUTION_TIMEOUT_MS = 12000
 
-function scheduleBoutAutoAdvance(gameId: string) {
+export function scheduleBoutAutoAdvance(gameId: string) {
   clearBoutTimer(gameId)
   const timer = setTimeout(async () => {
     boutTimers.delete(gameId)
@@ -53,7 +53,7 @@ function scheduleBoutAutoAdvance(gameId: string) {
   boutTimers.set(gameId, timer)
 }
 
-function scheduleChallengeAutoAdvance(gameId: string) {
+export function scheduleChallengeAutoAdvance(gameId: string) {
   clearChallengeTimer(gameId)
   const timer = setTimeout(async () => {
     challengeTimers.delete(gameId)
@@ -69,7 +69,7 @@ function scheduleChallengeAutoAdvance(gameId: string) {
   challengeTimers.set(gameId, timer)
 }
 
-function clearBoutTimer(gameId: string) {
+export function clearBoutTimer(gameId: string) {
   const timer = boutTimers.get(gameId)
   if (timer) {
     clearTimeout(timer)
@@ -77,7 +77,7 @@ function clearBoutTimer(gameId: string) {
   }
 }
 
-function clearChallengeTimer(gameId: string) {
+export function clearChallengeTimer(gameId: string) {
   const timer = challengeTimers.get(gameId)
   if (timer) {
     clearTimeout(timer)
@@ -93,7 +93,7 @@ function clearTurnResolutionTimer(gameId: string) {
   }
 }
 
-async function advancePastTurnResolution(gameId: string, state: GameState) {
+export async function advancePastTurnResolution(gameId: string, state: GameState) {
   if (state.lastTurnResult?.boutOver) {
     const attacker = state.attackClaim!.player
     const boutWinner: Player = state.lastTurnResult.cakesStolen > 0 ? attacker : opponent(attacker)
@@ -110,7 +110,7 @@ async function advancePastTurnResolution(gameId: string, state: GameState) {
   broadcast(supplied)
 }
 
-function scheduleTurnResolutionAutoAdvance(gameId: string) {
+export function scheduleTurnResolutionAutoAdvance(gameId: string) {
   clearTurnResolutionTimer(gameId)
   const timer = setTimeout(async () => {
     turnResolutionTimers.delete(gameId)
@@ -186,17 +186,17 @@ function setGameFields(state: GameState) {
   }
 }
 
-async function loadGame(id: string): Promise<GameState | null> {
+export async function loadGame(id: string): Promise<GameState | null> {
   const rows = await db.select().from(games).where(eq(games.id, id))
   if (rows.length === 0) return null
   return parseGame(rows[0]!)
 }
 
-async function saveGame(state: GameState) {
+export async function saveGame(state: GameState) {
   await db.update(games).set(setGameFields(state)).where(eq(games.id, state.id))
 }
 
-function broadcast(state: GameState) {
+export function broadcast(state: GameState) {
   const gameConns = connections.get(state.id)
   if (!gameConns) return
   for (const [player, ws] of gameConns) {

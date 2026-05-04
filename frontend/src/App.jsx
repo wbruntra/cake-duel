@@ -54,7 +54,9 @@ export default function App() {
   }
 
   return (
-    <GameContext.Provider value={{ state, connected, error, send, onLeave: handleLeave }}>
+    <GameContext.Provider
+      value={{ state, connected, error, send, onLeave: handleLeave, gameId, playerId }}
+    >
       <GameUIProvider>
         <div className="min-h-dvh grid grid-rows-[1fr]">
           <GameView />

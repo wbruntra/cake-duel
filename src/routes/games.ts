@@ -2,9 +2,32 @@ import { Hono } from 'hono'
 import { db } from '../db'
 import { games } from '../db/schema'
 import { eq } from 'drizzle-orm'
-import { newBout } from '../game/engine'
+import {
+  newBout,
+  playAttack,
+  playBlock,
+  skipBlock,
+  pass,
+  resolveTurn,
+  stateForPlayer,
+  finishBout,
+  startNextBout,
+  resolveChallenge,
+  toChallengeResult,
+  toTurnResolution,
+  determineBoutWinnerOnPass,
+} from '../game/engine'
 import type { GameState, Player } from '../game/types'
-import { stateForPlayer } from '../game/engine'
+import { getAIMove } from '../ai/llm-player'
+import {
+  broadcast,
+  loadGame,
+  saveGame,
+  scheduleTurnResolutionAutoAdvance,
+  scheduleBoutAutoAdvance,
+  scheduleChallengeAutoAdvance,
+  clearChallengeTimer,
+} from './ws'
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10)
@@ -164,6 +187,101 @@ app.get('/api/games/:id', async (c) => {
 
   const visibleState = stateForPlayer(gameState, player)
   return c.json(visibleState)
+})
+
+app.post('/api/games/:id/ai-move', async (c) => {
+  const gameId = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}))
+  const playerId: string = body.playerId
+
+  if (!playerId) return c.json({ error: 'playerId required' }, 400)
+
+  const state = await loadGame(gameId)
+  if (!state) return c.json({ error: 'Game not found' }, 404)
+  if (state.status !== 'playing') return c.json({ error: 'Game not active' }, 400)
+
+  const player: Player =
+    state.player1Id === playerId ? 'p1' : state.player2Id === playerId ? 'p2' : null!
+  if (!player) return c.json({ error: 'Not a player in this game' }, 403)
+
+  if (state.turnPlayer !== player) {
+    return c.json({ error: 'Not your turn' }, 400)
+  }
+
+  let move: Record<string, unknown>
+  try {
+    move = await getAIMove(state, player)
+  } catch (e: any) {
+    return c.json({ error: `AI error: ${e.message}` }, 500)
+  }
+
+  const type = move.type as string
+
+  if (type === 'attack') {
+    const result = playAttack(state, player, move.cardIds as string[], move.claimedName as string)
+    if (result.error) return c.json({ error: result.error }, 400)
+    clearChallengeTimer(gameId)
+    await saveGame(result.state)
+    broadcast(result.state)
+    return c.json({ ok: true, move })
+  }
+
+  if (type === 'pass') {
+    const result = pass(state, player)
+    if (result.error) return c.json({ error: result.error }, 400)
+    if (result.doublePass) {
+      const boutWinner = determineBoutWinnerOnPass(result.state)
+      const afterFinish = finishBout(result.state, boutWinner)
+      await saveGame(afterFinish)
+      broadcast(afterFinish)
+      if (afterFinish.turnPhase === 'bout_end') scheduleBoutAutoAdvance(gameId)
+    } else {
+      await saveGame(result.state)
+      broadcast(result.state)
+    }
+    return c.json({ ok: true, move })
+  }
+
+  if (type === 'block') {
+    const result = playBlock(state, player, move.cardIds as string[])
+    if (result.error) return c.json({ error: result.error }, 400)
+    await saveGame(result.state)
+    broadcast(result.state)
+    return c.json({ ok: true, move })
+  }
+
+  if (type === 'skipBlock') {
+    const result = skipBlock(state, player)
+    if (result.error) return c.json({ error: result.error }, 400)
+    await saveGame(result.state)
+    broadcast(result.state)
+    return c.json({ ok: true, move })
+  }
+
+  if (type === 'resolve') {
+    const { state: resolved, turnResult } = resolveTurn(state)
+    const next = toTurnResolution(resolved, turnResult)
+    await saveGame(next)
+    broadcast(next)
+    scheduleTurnResolutionAutoAdvance(gameId)
+    return c.json({ ok: true, move })
+  }
+
+  if (type === 'challenge') {
+    const target = move.target as 'attack' | 'block'
+    if (target !== 'attack' && target !== 'block') {
+      return c.json({ error: 'Invalid challenge target' }, 400)
+    }
+    const result = resolveChallenge(state, player, target)
+    if ('error' in result) return c.json({ error: result.error }, 400)
+    const challengeState = toChallengeResult(result.state, result.challengeResult)
+    await saveGame(challengeState)
+    broadcast(challengeState)
+    scheduleChallengeAutoAdvance(gameId)
+    return c.json({ ok: true, move })
+  }
+
+  return c.json({ error: `Unknown move type: ${type}` }, 400)
 })
 
 export default app
