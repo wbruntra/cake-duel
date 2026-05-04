@@ -12,7 +12,7 @@ app.use('/*', cors())
 app.route('/', gameRoutes)
 
 const server = Bun.serve<WsData>({
-  port: 9001,
+  port: process.env.PORT || 9001,
   fetch(req, server) {
     const url = new URL(req.url)
     if (url.pathname === '/ws') {
