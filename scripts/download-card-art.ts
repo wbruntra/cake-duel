@@ -1,4 +1,3 @@
-import sharp from 'sharp'
 import { mkdir } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 
@@ -28,13 +27,12 @@ async function downloadAndCompress(name, url) {
 
   const outPath = join(OUT_DIR, `${name}.webp`)
 
-  await sharp(buf)
-    .resize(CARD_SIZE, CARD_SIZE, { fit: 'cover' })
+  const bytesWritten = await new Bun.Image(buf)
+    .resize(CARD_SIZE, CARD_SIZE)
     .webp({ quality: 80 })
-    .toFile(outPath)
+    .write(outPath)
 
-  const stats = await Bun.file(outPath).stat()
-  console.log(`  → ${outPath} (${(stats.size / 1024).toFixed(1)} KB)`)
+  console.log(`  → ${outPath} (${(bytesWritten / 1024).toFixed(1)} KB)`)
 }
 
 await mkdir(OUT_DIR, { recursive: true })
