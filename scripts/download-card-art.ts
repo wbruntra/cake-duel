@@ -1,9 +1,10 @@
 import { mkdir } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
+import sharp from 'sharp'
 
 const IMAGES = {
-  soldier:
-    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-04T09-42-11-706Z.jpg',
+  // soldier:
+  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-04T09-42-11-706Z.jpg',
   // archer:
   //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-07-33-522Z.jpg',
   // wizard:
@@ -12,8 +13,8 @@ const IMAGES = {
   //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-00-525Z.jpg',
   // scientist:
   //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-09-904Z.jpg',
-  // sir_wolfy:
-  //   'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-03T17-20-22-716Z.jpg',
+  sir_wolfy:
+    'https://wbruntra.us-iad-1.linodeobjects.com/generated-images/generated_2026-05-08T09-37-05-225Z.jpg',
 }
 
 const CARD_SIZE = 400
@@ -27,10 +28,12 @@ async function downloadAndCompress(name, url) {
 
   const outPath = join(OUT_DIR, `${name}.webp`)
 
-  const bytesWritten = await new Bun.Image(buf)
-    .resize(CARD_SIZE, CARD_SIZE)
+  const outBuf = await sharp(buf)
+    .resize(CARD_SIZE, CARD_SIZE, { fit: 'cover', position: 'center' })
     .webp({ quality: 80 })
-    .write(outPath)
+    .toBuffer()
+  await Bun.write(outPath, outBuf)
+  const bytesWritten = outBuf.byteLength
 
   console.log(`  → ${outPath} (${(bytesWritten / 1024).toFixed(1)} KB)`)
 }

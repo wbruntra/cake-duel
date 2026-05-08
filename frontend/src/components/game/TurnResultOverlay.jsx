@@ -61,6 +61,10 @@ export default function TurnResultOverlay() {
   const attackerLabel = iStoleCakes ? myName : oppName
   const defenderLabel = iStoleCakes ? oppName : myName
 
+  const attackWolfyCount = (attackClaim.playedCardIds || []).filter((id) => id === 'sir_wolfy').length
+  const blockWolfyCount = (blockClaim?.playedCardIds || []).filter((id) => id === 'sir_wolfy').length
+  const wolfyInfo = getCardInfo('sir_wolfy')
+
   const cakePerAttacker = attackInfo?.cakes || 0
   const totalAttack = cakePerAttacker * attackClaim.count
   const totalBlockCakes = blockClaim
@@ -216,6 +220,28 @@ export default function TurnResultOverlay() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {stage === 'outcome' && (attackWolfyCount > 0 || blockWolfyCount > 0) && (
+          <motion.div
+            key="wolfy-reveal"
+            initial={{ opacity: 0, scale: 0.85, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4, type: 'spring', stiffness: 200, damping: 18 }}
+            className="flex flex-col items-center gap-2 mb-3"
+          >
+            <div className="text-[10px] uppercase tracking-widest text-text">Revealed face-up</div>
+            <div className="flex gap-3">
+              {attackWolfyCount > 0 && (
+                <SirWolfyRevealCard label={`${attackerLabel}`} count={attackWolfyCount} info={wolfyInfo} />
+              )}
+              {blockWolfyCount > 0 && (
+                <SirWolfyRevealCard label={`${defenderLabel}`} count={blockWolfyCount} info={wolfyInfo} />
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="h-14 w-full max-w-sm flex items-center justify-center">
         {stage === 'outcome' && showContinue && (
           <motion.div
@@ -244,6 +270,19 @@ export default function TurnResultOverlay() {
         )}
       </div>
     </motion.div>
+  )
+}
+
+function SirWolfyRevealCard({ label, count, info }) {
+  return (
+    <div className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-text/30 bg-text/5">
+      <span className="text-[10px] uppercase tracking-wider text-text">{label}</span>
+      <span className="text-3xl">{info?.emoji || '🐺'}</span>
+      <span className="text-sm font-semibold text-text-h">
+        {count > 1 ? `${count}× ` : ''}{info?.name || 'Sir Wolfy'}
+      </span>
+      <span className="text-[10px] text-text italic">Taunt!</span>
+    </div>
   )
 }
 

@@ -12,6 +12,7 @@
     "db:update": "bun scripts/db-migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "build": "cd frontend && bun run build",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html,md}\" \"!**/node_modules/**\" \"!**/dist/**\" \"!**/*.lock\" \"!**/cake-duel.db\"",
     "ai:self-play": "bun run src/ai/mcts/self-play.ts",
     "ai:evaluate": "bun run src/ai/mcts/evaluate.ts",
