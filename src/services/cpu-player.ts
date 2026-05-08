@@ -5,7 +5,7 @@ import { handleMove } from './game'
 import { getCPUMove } from '../ai/cpu-player'
 import type { Move } from './game'
 
-const CPU_DELAY_MS = 800
+const CPU_DELAY_MS = 400
 
 const cpuTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
@@ -32,10 +32,11 @@ function isCPUAckPhase(state: GameState): boolean {
   if (!state.cpuPlayer) return false
   if (state.status !== 'playing') return false
 
+  const cpu = state.cpuPlayer
   const phase = state.turnPhase
-  if (phase === 'turn_resolution' || phase === 'challenge_result' || phase === 'bout_end') {
-    return true
-  }
+  if (phase === 'turn_resolution') return !state.turnAcks.includes(cpu)
+  if (phase === 'challenge_result') return !state.challengeAcks.includes(cpu)
+  if (phase === 'bout_end') return !state.boutEndAcks.includes(cpu)
   return false
 }
 

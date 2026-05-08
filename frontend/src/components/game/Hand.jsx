@@ -1,10 +1,47 @@
+import { useRef, useState, useEffect } from 'react'
 import Card from './Card'
 import { useGameUI } from '@/hooks/useGameUI'
 import { useGame } from '@/context/GameContext'
 
+// Card pixel dimensions per size (must match Card.jsx SIZE_CLASSES)
+const SIZES = [
+  { name: 'lg', w: 112, h: 160 },
+  { name: 'md', w: 80, h: 112 },
+  { name: 'sm', w: 56, h: 80 },
+]
+const MIN_PEEK = 28 // minimum visible strip of each hidden card
+
+function pickLayout(availableWidth, cardCount) {
+  if (cardCount <= 1) return { size: SIZES[0], peek: 0 }
+  for (const size of SIZES) {
+    const minWidth = size.w + MIN_PEEK * (cardCount - 1)
+    if (minWidth <= availableWidth) {
+      const peek = Math.min(size.w - 8, (availableWidth - size.w) / (cardCount - 1))
+      return { size, peek }
+    }
+  }
+  // Even sm doesn't fit — squish as much as possible
+  const size = SIZES[SIZES.length - 1]
+  const peek = Math.max(MIN_PEEK * 0.5, (availableWidth - size.w) / (cardCount - 1))
+  return { size, peek }
+}
+
 export default function Hand() {
   const { state } = useGame()
   const { selectedIndices, toggleCard } = useGameUI()
+  const containerRef = useRef(null)
+  const [availableWidth, setAvailableWidth] = useState(320)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const obs = new ResizeObserver(([entry]) => {
+      setAvailableWidth(entry.contentRect.width)
+    })
+    obs.observe(el)
+    setAvailableWidth(el.clientWidth)
+    return () => obs.disconnect()
+  }, [])
 
   if (!state) return null
 
@@ -15,23 +52,22 @@ export default function Hand() {
   const cardCount = state.hand.length
   if (cardCount === 0) {
     return (
-      <div className="flex items-center justify-center py-4 text-text italic text-sm">
+      <div
+        ref={containerRef}
+        className="flex items-center justify-center py-4 text-text italic text-sm"
+      >
         No cards
       </div>
     )
   }
 
-  const CARD_WIDTH = 112
-  const CARD_HEIGHT = 160
-  const MAX_HAND_WIDTH = 400
-  const MIN_PEEK = 52
-  const PEEK =
-    cardCount > 1 ? Math.max(MIN_PEEK, (MAX_HAND_WIDTH - CARD_WIDTH) / (cardCount - 1)) : 0
-  const handWidth = CARD_WIDTH + PEEK * (cardCount - 1)
+  const { size, peek } = pickLayout(availableWidth, cardCount)
+  const handWidth = cardCount === 1 ? size.w : size.w + peek * (cardCount - 1)
+  const liftPx = Math.round(size.h * 0.12)
 
   return (
-    <div className="relative mx-auto" style={{ width: handWidth, height: CARD_HEIGHT + 28 }}>
-      <div className="relative w-full h-full">
+    <div ref={containerRef} className="w-full flex justify-center">
+      <div className="relative" style={{ width: handWidth, height: size.h + liftPx + 4 }}>
         {state.hand.map((cardId, i) => {
           const isSelected = selectedIndices.includes(i)
           const order = isSelected ? selectedIndices.indexOf(i) : null
@@ -40,9 +76,9 @@ export default function Hand() {
               key={i}
               className="absolute transition-all duration-200 ease-out"
               style={{
-                left: PEEK * i,
+                left: peek * i,
                 zIndex: isSelected ? 10 + i : i,
-                top: isSelected ? -16 : 0,
+                top: isSelected ? 0 : liftPx,
               }}
             >
               <Card
@@ -50,7 +86,7 @@ export default function Hand() {
                 selected={isSelected}
                 selectionOrder={order}
                 onClick={canAct ? () => toggleCard(i) : null}
-                size="lg"
+                size={size.name}
               />
             </div>
           )

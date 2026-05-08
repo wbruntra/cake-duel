@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Toaster } from 'sonner'
 import { GameContext } from './context/GameContext'
 import { GameUIProvider } from './hooks/useGameUI'
 import { useWebSocket } from './hooks/useWebSocket'
@@ -65,6 +66,7 @@ export default function App() {
       value={{ state, connected, error, send, onLeave: handleLeave, gameId, playerId }}
     >
       <GameUIProvider>
+        <Toaster position="top-center" richColors />
         <div className="min-h-dvh grid grid-rows-[1fr]">
           <GameView />
         </div>

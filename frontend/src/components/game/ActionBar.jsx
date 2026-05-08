@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useGame } from '@/context/GameContext'
 import { useGameUI } from '@/hooks/useGameUI'
 import { getCardInfo, getBlockerName } from '@/utils/cards'
@@ -8,9 +7,7 @@ const BAR_CLASS =
   'sticky bottom-0 safe-bottom bg-bg/95 backdrop-blur-sm border-t border-border px-4 py-3 h-[108px] flex flex-col items-center justify-center gap-2'
 
 export default function ActionBar() {
-  const { state, send, onLeave, gameId, playerId } = useGame()
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError] = useState(null)
+  const { state, send, onLeave } = useGame()
   const { selectedIndices, claimedName, setClaimPickerOpen, clearSelection } = useGameUI()
 
   if (!state) return null
@@ -78,26 +75,6 @@ export default function ActionBar() {
     onLeave()
   }
 
-  async function doAiMove() {
-    if (aiLoading) return
-    tap()
-    setAiLoading(true)
-    setAiError(null)
-    try {
-      const res = await fetch(`/api/games/${gameId}/ai-move`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId }),
-      })
-      const data = await res.json()
-      if (!res.ok) setAiError(data.error ?? 'AI move failed')
-    } catch {
-      setAiError('AI request failed')
-    } finally {
-      setAiLoading(false)
-    }
-  }
-
   if (isChallengeResult) {
     const hasAcked = state.challengeAcks?.includes(state.player)
     return (
@@ -128,21 +105,6 @@ export default function ActionBar() {
     )
   }
 
-  const aiButton = (
-    <button
-      className="text-xs text-text/50 underline touch-manipulation"
-      onClick={doAiMove}
-      disabled={aiLoading}
-    >
-      {aiLoading ? '🤖 Thinking…' : '🤖 AI move'}
-    </button>
-  )
-  const aiButtonOrError = aiError ? (
-    <span className="text-xs text-danger">{aiError}</span>
-  ) : (
-    aiButton
-  )
-
   if (isAttackPhase) {
     if (selectedIndices.length === 0) {
       return (
@@ -153,7 +115,6 @@ export default function ActionBar() {
           >
             Pass
           </button>
-          {aiButtonOrError}
         </div>
       )
     }
@@ -167,12 +128,9 @@ export default function ActionBar() {
           >
             Choose claim →
           </button>
-          <div className="flex gap-4">
-            <button className="text-sm text-text underline" onClick={doPass}>
-              Pass
-            </button>
-            {aiButtonOrError}
-          </div>
+          <button className="text-sm text-text underline" onClick={doPass}>
+            Pass
+          </button>
         </div>
       )
     }
@@ -192,7 +150,6 @@ export default function ActionBar() {
           <button className="text-sm text-text underline" onClick={() => setClaimPickerOpen(true)}>
             Change claim
           </button>
-          {aiButtonOrError}
         </div>
       </div>
     )
@@ -216,7 +173,6 @@ export default function ActionBar() {
               Call the bluff!
             </button>
           </div>
-          {aiButtonOrError}
         </div>
       )
     }
@@ -229,12 +185,9 @@ export default function ActionBar() {
         >
           Block as {blockerName?.name || 'Defender'} (×{selectedIndices.length})
         </button>
-        <div className="flex gap-4">
-          <button className="text-sm text-danger underline" onClick={doSkipBlock}>
-            Let through
-          </button>
-          {aiButtonOrError}
-        </div>
+        <button className="text-sm text-danger underline" onClick={doSkipBlock}>
+          Let through
+        </button>
       </div>
     )
   }
@@ -265,7 +218,6 @@ export default function ActionBar() {
             Continue
           </button>
         )}
-        {aiButtonOrError}
       </div>
     )
   }

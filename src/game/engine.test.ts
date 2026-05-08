@@ -914,10 +914,10 @@ describe('endBout', () => {
     expect(result.turnPlayer).toBe('p1')
   })
 
-  test('game ends when P1 reaches 3 bout wins', () => {
+  test('game ends when P1 reaches 2 bout wins', () => {
     const state = baseState({
-      currentBout: 3,
-      boutWinners: ['p1', 'p1', null],
+      currentBout: 2,
+      boutWinners: ['p1', null, null],
     })
 
     const result = endBout(state, 'p1')
@@ -927,10 +927,10 @@ describe('endBout', () => {
     expect(result.turnPhase).toBe('game_over')
   })
 
-  test('game ends when P2 reaches 3 bout wins', () => {
+  test('game ends when P2 reaches 2 bout wins', () => {
     const state = baseState({
-      currentBout: 3,
-      boutWinners: ['p2', 'p2', null],
+      currentBout: 2,
+      boutWinners: ['p2', null, null],
     })
 
     const result = endBout(state, 'p2')
@@ -939,24 +939,24 @@ describe('endBout', () => {
     expect(result.status).toBe('finished')
   })
 
-  test('game continues with 2-1 score', () => {
+  test('game continues with 1-1 score after bout 2', () => {
     const state = baseState({
-      currentBout: 3,
-      boutWinners: ['p1', 'p2', null],
+      currentBout: 2,
+      boutWinners: ['p1', null, null],
     })
 
-    const result = endBout(state, 'p1')
+    const result = endBout(state, 'p2')
 
     expect(result.winner).toBeNull()
     expect(result.status).toBe('playing')
-    expect(result.currentBout).toBe(4)
-    expect(result.boutWinners).toEqual(['p1', 'p2', 'p1'])
+    expect(result.currentBout).toBe(3)
+    expect(result.boutWinners).toEqual(['p1', 'p2', null])
   })
 
-  test('game ends when P2 gets 3 wins on bout 5', () => {
+  test('game ends when P2 gets 2 wins on bout 3', () => {
     const state = baseState({
-      currentBout: 5,
-      boutWinners: ['p1', 'p2', 'p1', 'p2', null],
+      currentBout: 3,
+      boutWinners: ['p1', 'p2', null],
     })
 
     const result = endBout(state, 'p2')
@@ -1097,25 +1097,20 @@ describe('full game flow', () => {
     expect(afterEnd.boutWinners[0]).toBe('p1')
   })
 
-  test('simulate a simple game: P1 wins all 3 bouts', () => {
+  test('simulate a simple game: P1 wins first 2 bouts', () => {
     // Bout 1: P1 wins
     let state = baseState({ currentBout: 1, boutWinners: [null, null, null] })
     state = endBout(state, 'p1')
     expect(state.boutWinners).toEqual(['p1', null, null])
     expect(state.status).toBe('playing')
 
-    // Bout 2: P1 wins again
-    state = endBout(state, 'p1')
-    expect(state.boutWinners).toEqual(['p1', 'p1', null])
-    expect(state.status).toBe('playing')
-
-    // Bout 3: P1 wins game
+    // Bout 2: P1 wins game
     state = endBout(state, 'p1')
     expect(state.winner).toBe('p1')
     expect(state.status).toBe('finished')
   })
 
-  test('simulate a back-and-forth game', () => {
+  test('simulate a back-and-forth game: P2 wins 2-1', () => {
     let state = baseState({ currentBout: 1, boutWinners: [null, null, null] })
 
     // Bout 1: P2 wins
@@ -1126,15 +1121,9 @@ describe('full game flow', () => {
     // Bout 2: P1 wins
     state = endBout(state, 'p1')
     expect(state.boutWinners).toEqual(['p2', 'p1', null])
+    expect(state.status).toBe('playing')
 
-    // Bout 3: P1 wins
-    state = endBout(state, 'p1')
-    expect(state.boutWinners).toEqual(['p2', 'p1', 'p1'])
-
-    // Bout 4: P2 wins
-    state = endBout(state, 'p2')
-
-    // Bout 5: P2 wins - game over
+    // Bout 3: P2 wins - game over
     state = endBout(state, 'p2')
     expect(state.winner).toBe('p2')
     expect(state.status).toBe('finished')
@@ -1169,7 +1158,7 @@ describe('finishBout', () => {
   })
 
   test('deciding bout skips bout_end and goes to game_over', () => {
-    const state = baseState({ currentBout: 3, boutWinners: ['p1', 'p1', null] })
+    const state = baseState({ currentBout: 2, boutWinners: ['p1', null, null] })
     const result = finishBout(state, 'p1')
 
     expect(result.winner).toBe('p1')
