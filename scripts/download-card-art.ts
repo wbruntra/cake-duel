@@ -1,6 +1,5 @@
 import { mkdir } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
-import sharp from 'sharp'
 
 const IMAGES = {
   // soldier:
@@ -28,8 +27,14 @@ async function downloadAndCompress(name: string, url: string) {
 
   const outPath = join(OUT_DIR, `${name}.webp`)
 
-  const outBuf = await sharp(buf)
-    .resize(CARD_SIZE, CARD_SIZE, { fit: 'cover', position: 'center' })
+  // Bun.Image can't crop, so sources must already be square.
+  const { width, height } = await new Bun.Image(buf).metadata()
+  if (width !== height) {
+    throw new Error(`${name} must be square, got ${width}x${height}. Regenerate it as a square image.`)
+  }
+
+  const outBuf = await new Bun.Image(buf)
+    .resize(CARD_SIZE, CARD_SIZE)
     .webp({ quality: 80 })
     .toBuffer()
   await Bun.write(outPath, outBuf)
