@@ -2,16 +2,14 @@ module.exports = {
   apps: [
     {
       name: 'cake-duel-backend',
-      script: 'bun',
-      args: 'run index.ts',
+      script: 'index.ts',
+      interpreter: 'bun',
       cwd: __dirname,
-      interpreter: 'none',
       watch: false,
       env: {
         NODE_ENV: 'production',
-      },
-      env_development: {
-        NODE_ENV: 'development',
+        // Must match app_port in ansible/host_vars and the waker entry.
+        PORT: 12033,
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       error_file: 'logs/backend-error.log',

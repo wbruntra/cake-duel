@@ -9,6 +9,8 @@ const app = new Hono()
 app.use(logger())
 app.use('/*', cors())
 
+app.get('/api/health', (c) => c.json({ status: 'ok' }))
+
 app.route('/', gameRoutes)
 
 const server = Bun.serve<WsData>({

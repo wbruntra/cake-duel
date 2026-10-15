@@ -1,0 +1,16 @@
+---
+# cake.bruntrager.win on gaybor_new. Requests go
+# nginx -> waker (127.0.0.1:8000, ~/sysperf/waker) -> cake-duel-backend (app_port).
+# waker starts and stops the pm2 process on demand, so it may be stopped
+# between deploys; the restart step starts it either way.
+# nginx serves frontend/dist statically (ansible/files/nginx.cake.conf).
+project_root: /home/william/personal/cake-duel
+target_branch: master
+# Must match pm2_name in ~/sysperf/waker/apps.config.ts.
+pm2_name: cake-duel-backend
+pm2_node_version: v24.12.0
+# Must match PORT in ecosystem.config.cjs and the cake entry in
+# ~/sysperf/waker/apps.config.ts.
+app_port: 12033
+public_url: https://cake.bruntrager.win
+db_file: cake-duel.db
