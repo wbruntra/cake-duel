@@ -9,6 +9,7 @@
     "backend": "bun --watch index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:apply": "bun scripts/migrate.ts",
     "db:update": "bun scripts/db-migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",

@@ -62,11 +62,13 @@
           when: not ansible_check_mode
 
         - name: Apply drizzle migrations
-          command: bun run db:migrate
+          # Not db:migrate: drizzle-kit needs better-sqlite3, which doesn't
+          # load under Bun (no real node on the non-interactive PATH).
+          command: bun run db:apply
           args:
             chdir: '{{ project_root }}'
           register: migrate_result
-          changed_when: "'applied successfully' in migrate_result.stdout"
+          changed_when: "'applied: 0 new' not in migrate_result.stdout"
       tags: [migrate, db]
 
     - name: 5. Build frontend
