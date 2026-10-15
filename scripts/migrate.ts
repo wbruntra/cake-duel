@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 /**
  * Apply pending migrations from ./drizzle using bun:sqlite.
- * Used by the deploy playbook: drizzle-kit needs better-sqlite3, which
- * doesn't load under Bun. Same __drizzle_migrations table as drizzle-kit.
+ * Used locally (db:update) and by the deploy playbook. drizzle-kit can't
+ * connect through bun:sqlite (it needs better-sqlite3 or libsql), so it is
+ * only used for `generate`. Same __drizzle_migrations table as drizzle-kit.
  *
  * Usage (from the project root):
  *   bun scripts/migrate.ts

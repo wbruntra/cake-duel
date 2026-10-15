@@ -39,9 +39,12 @@ bun run db:update   # generate migration file + apply it
 Steps separately if needed:
 
 ```bash
-bun run db:generate  # create migration file from schema diff
-bun run db:migrate   # apply pending migrations
+bun run db:generate  # create migration file from schema diff (drizzle-kit)
+bun run db:apply     # apply pending migrations (bun:sqlite migrator)
 ```
+
+drizzle-kit only generates: it can't connect through `bun:sqlite`, so there is no
+`better-sqlite3` and no `drizzle-kit migrate/push/studio`.
 
 ## Bun-specific conventions
 

@@ -14,5 +14,6 @@ const generate = await $`bunx drizzle-kit generate`.text()
 console.log(generate.trim())
 
 // Apply any pending migrations
-const migrate = await $`bunx drizzle-kit migrate`.text()
+// drizzle-kit can't connect via bun:sqlite, so apply with our own migrator
+const migrate = await $`bun scripts/migrate.ts`.text()
 console.log(migrate.trim())

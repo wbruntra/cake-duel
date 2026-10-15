@@ -20,7 +20,7 @@ const IMAGES = {
 const CARD_SIZE = 400
 const OUT_DIR = resolve(import.meta.dir, '../frontend/public/cards')
 
-async function downloadAndCompress(name, url) {
+async function downloadAndCompress(name: string, url: string) {
   console.log(`Downloading ${name}...`)
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Failed to download ${name}: ${res.status}`)

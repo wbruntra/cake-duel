@@ -62,8 +62,7 @@
           when: not ansible_check_mode
 
         - name: Apply drizzle migrations
-          # Not db:migrate: drizzle-kit needs better-sqlite3, which doesn't
-          # load under Bun (no real node on the non-interactive PATH).
+          # bun:sqlite migrator; drizzle-kit can't connect through bun:sqlite.
           command: bun run db:apply
           args:
             chdir: '{{ project_root }}'
